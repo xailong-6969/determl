@@ -61,6 +61,31 @@ def cmd_verify(args: argparse.Namespace) -> None:
     print(result)
 
 
+def cmd_benchmark(args: argparse.Namespace) -> None:
+    """Run the auto-scaling determinism benchmark."""
+    from determl.engine import DeterministicEngine
+    from determl.benchmark import BenchmarkConfig, run_benchmark, estimate_param_count
+
+    print(f"Loading model: {args.model}...")
+    engine = DeterministicEngine(
+        seed=args.seed,
+        precision=args.precision,
+        device=args.device,
+    )
+    engine.load(args.model)
+
+    # Auto-detect model size for scaling
+    param_b = estimate_param_count(engine.model) if engine.model else None
+    config = BenchmarkConfig.from_depth(args.depth, param_b)
+
+    print(f"Benchmark depth: {config.depth}")
+    print(f"Prompts: {config.num_prompts} | Runs per prompt: {config.runs_per_prompt} | Total: {config.total_runs}")
+    print("\nRunning benchmark...\n")
+
+    result = run_benchmark(engine, config, max_new_tokens=args.max_tokens)
+    print(result)
+
+
 def cmd_compare(args: argparse.Namespace) -> None:
     """Compare model output with and without determl enforcement."""
     import random
@@ -229,6 +254,15 @@ def main() -> None:
     compare_parser.add_argument("--precision", default="high", help="Canonical precision (default: high)")
     compare_parser.add_argument("--device", default=None, help="Device (default: auto)")
 
+    # -- determl benchmark <model> --
+    bench_parser = subparsers.add_parser("benchmark", help="Auto-scaling determinism benchmark")
+    bench_parser.add_argument("model", help="HuggingFace model name")
+    bench_parser.add_argument("--depth", default="auto", choices=["auto", "light", "standard", "deep"], help="Benchmark depth (default: auto)")
+    bench_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    bench_parser.add_argument("--precision", default="high", help="Canonical precision (default: high)")
+    bench_parser.add_argument("--device", default=None, help="Device (default: auto)")
+    bench_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per prompt (default: 256)")
+
     # -- determl run <model> --
     run_parser = subparsers.add_parser("run", help="Interactive deterministic inference")
     run_parser.add_argument("model", help="HuggingFace model name")
@@ -248,6 +282,7 @@ def main() -> None:
         "scan": cmd_scan,
         "verify": cmd_verify,
         "compare": cmd_compare,
+        "benchmark": cmd_benchmark,
         "run": cmd_run,
     }
 
