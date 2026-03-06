@@ -61,8 +61,8 @@ source "$VENV_DIR/bin/activate"
 # Step 2: Install determl
 # ============================================================================
 echo_green ">> Installing determl..."
-pip install --upgrade pip -q
-pip install -e "$ROOT[transformers,dev]" -q
+pip install --upgrade pip
+pip install -e "$ROOT[transformers,dev]"
 
 echo_green ">> Installation complete!"
 
