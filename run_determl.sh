@@ -115,13 +115,14 @@ echo_green ">> Using seed: $SEED"
 while true; do
     echo ""
     echo_green ">> What would you like to do?"
-    echo "   1) run    - Interactive deterministic inference"
-    echo "   2) scan   - Scan model for non-deterministic ops"
-    echo "   3) verify - Verify model produces deterministic output"
-    echo "   4) info   - Show environment information"
-    echo "   5) exit   - Exit determl"
+    echo "   1) run     - Interactive deterministic inference"
+    echo "   2) scan    - Scan model for non-deterministic ops"
+    echo "   3) verify  - Verify model produces deterministic output"
+    echo "   4) compare - Before vs after determl comparison"
+    echo "   5) info    - Show environment information"
+    echo "   6) exit    - Exit determl"
     echo ""
-    echo -en "${GREEN}>> Choose [1-5] (default: 1): ${RESET}"
+    echo -en "${GREEN}>> Choose [1-6] (default: 1): ${RESET}"
     read -p "" MODE_CHOICE
 
     case "${MODE_CHOICE:-1}" in
@@ -137,15 +138,19 @@ while true; do
             echo_green ">> Verifying determinism..."
             determl verify "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
             ;;
-        4|info)
+        4|compare)
+            echo_green ">> Running before/after comparison..."
+            determl compare "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
+            ;;
+        5|info)
             determl info
             ;;
-        5|exit|quit|q)
+        6|exit|quit|q)
             echo_green ">> Done!"
             break
             ;;
         *)
-            echo_red ">> Invalid choice. Please select 1-5."
+            echo_red ">> Invalid choice. Please select 1-6."
             ;;
     esac
 done
