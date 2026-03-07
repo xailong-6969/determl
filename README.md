@@ -85,9 +85,9 @@ optimizer.step()             # weight updates — deterministic
 ```python
 from determl import DeterministicEngine
 
-# Load model + auto-fix all non-deterministic ops
+# Load any HuggingFace model + auto-fix all non-deterministic ops
 engine = DeterministicEngine(seed=42)
-engine.load("Qwen/Qwen2.5-Coder-0.5B-Instruct")
+engine.load("<model>")  # e.g., "Qwen/Qwen2.5-0.5B-Instruct", "meta-llama/Llama-3-8B", etc.
 
 # Run inference — same output every time, on any GPU
 result = engine.run("Write hello world in Python")
@@ -145,23 +145,29 @@ print(result)
 determl includes a full command-line interface:
 
 ```bash
+# Replace <model> with any HuggingFace model name, e.g.:
+#   Qwen/Qwen2.5-0.5B-Instruct
+#   meta-llama/Llama-3-8B
+#   mistralai/Mistral-7B-v0.1
+#   gpt2
+
 # Interactive deterministic inference
-determl run Qwen/Qwen2.5-Coder-0.5B-Instruct
+determl run <model>
 
 # Scan model for non-deterministic ops (Dropout, Flash Attention, etc.)
-determl scan Qwen/Qwen2.5-Coder-0.5B-Instruct
+determl scan <model>
 
 # Verify determinism (run 5 times, compare hashes)
-determl verify Qwen/Qwen2.5-Coder-0.5B-Instruct
+determl verify <model>
 
 # Before vs after determl comparison
-determl compare Qwen/Qwen2.5-Coder-0.5B-Instruct
+determl compare <model>
 
 # Full benchmark (auto-scales based on model size)
-determl benchmark Qwen/Qwen2.5-Coder-0.5B-Instruct
+determl benchmark <model>
 
 # Export inference proof to JSON
-determl export Qwen/Qwen2.5-Coder-0.5B-Instruct -o proof.json
+determl export <model> -o proof.json
 
 # Verify a proof from another machine
 determl cross-verify proof.json
