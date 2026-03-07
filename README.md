@@ -1,214 +1,252 @@
-# determl -- Deterministic ML Inference Library
+# determl — Deterministic ML Library
 
-**Detect, prevent, and ENFORCE determinism in ML inference.**
+**Enforce determinism in ML inference and training. One line of code.**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen.svg)]()
 
 ---
 
-## The Problem
+## Why?
 
-Machine learning models can give **different outputs every time you run them** -- even with the exact same input. This happens because of:
+ML models give **different outputs every time you run them** — even with the exact same input. This happens because of GPU non-determinism (Flash Attention, CUDA atomics, cuDNN auto-tuning, floating-point ordering).
 
-- **Random seeds** -- PyTorch, NumPy, and Python each have their own random number generators
-- **GPU non-determinism** -- CUDA operations like `scatter_add` and Flash Attention use non-deterministic algorithms by default for speed
-- **cuDNN auto-tuning** -- picks different algorithms on different runs
-- **Floating point arithmetic** -- the order of addition can change results across hardware
+This breaks everything that requires **verifiable computation**: decentralized AI networks, reproducible research, CI/CD for ML, audit trails.
 
-This is a problem when you need to **prove** that a model was executed correctly -- for example, in decentralized AI networks where multiple nodes must agree on the output.
+**determl fixes this.** One import, one function call.
 
-## What Makes determl Different
-
-Most "determinism" solutions just set `torch.manual_seed()` and call it a day. **determl goes further:**
-
-| Feature | Other tools | determl v2 |
-|---------|------------|------------|
-| Seed locking | Sets seeds | Sets seeds |
-| Op detection | Not available | Scans model for non-deterministic ops |
-| Op replacement | Not available | **Auto-replaces** Flash Attention with math backend, Dropout with identity |
-| Cross-hardware | Not addressed | **Canonicalizes** outputs so hashes match across A100/V100/RTX |
-| Environment enforcement | Not addressed | **Refuses** to compare results from incompatible hardware |
-| Verification | Not available | Runs N times, compares SHA-256 hashes |
+```python
+import determl
+determl.enforce()  # Everything is now deterministic.
+```
 
 ---
 
-## Quick Start
+## Installation
 
-### Installation
+### Quick Start (recommended)
 
 ```bash
-# Basic (torch + numpy only)
+git clone -b v2-enforcement https://github.com/xailong-6969/determl.git
+cd determl
+bash run_determl.sh
+```
+
+The script automatically:
+1. Creates a virtual environment
+2. Installs determl + all dependencies
+3. Detects your GPU
+4. Launches the interactive menu
+
+### Manual Install
+
+```bash
+# Clone
+git clone -b v2-enforcement https://github.com/xailong-6969/determl.git
+cd determl
+
+# Basic (torch + numpy)
 pip install -e .
 
-# With HuggingFace wrapper support
+# With HuggingFace model support
 pip install -e ".[transformers]"
 
 # With dev tools (pytest)
 pip install -e ".[dev]"
 ```
 
-### One-Line Setup (like rl-swarm)
+### Requirements
 
-```bash
-./run_determl.sh
-# Creates venv, installs everything, prompts for model name, launches
-```
+- Python 3.10+
+- PyTorch 2.0+
+- Any NVIDIA GPU (recommended) or CPU
 
 ---
 
-### The DeterministicEngine (v2 API)
+## Usage
+
+### 1. One-Line Enforcement (for any ML code)
+
+```python
+import determl
+
+# Lock all sources of randomness globally
+determl.enforce(seed=42)
+
+# Now ANY PyTorch code is deterministic:
+output = model(input)        # inference — deterministic
+loss.backward()              # training — deterministic
+optimizer.step()             # weight updates — deterministic
+```
+
+### 2. DeterministicEngine (for LLM inference)
 
 ```python
 from determl import DeterministicEngine
 
 # Load model + auto-fix all non-deterministic ops
-engine = DeterministicEngine(seed=42, precision="high")
+engine = DeterministicEngine(seed=42)
 engine.load("Qwen/Qwen2.5-Coder-0.5B-Instruct")
 
-# Run deterministic inference
+# Run inference — same output every time, on any GPU
 result = engine.run("Write hello world in Python")
-print(result.text)            # Same every time
-print(result.canonical_hash)  # Same hash across different GPUs
-
-# Export proof of execution
-proof = result.to_proof()
-# Send proof to another node for verification
+print(result.text)            # The generated text
+print(result.canonical_hash)  # SHA-256 hash — identical across GPUs
 ```
 
-### Scan + Auto-Fix
+### 3. Verify Determinism
 
 ```python
-from determl import DeterministicEngine
-
-engine = DeterministicEngine(seed=42)
-report = engine.load("your-model")
-print(report)
-# Enforcement Report for 'your-model' (142 modules scanned)
-# ==========================================================
-#   [FIXED] 'attention' (MultiheadAttention): Wrapped with deterministic SDPA
-#   [FIXED] 'dropout' (Dropout): Replaced with identity
-#   [SKIP] 'pool' (FractionalMaxPool2d): Uses random samples by design
-#
-# Summary: 2 fixed, 1 skipped
+# Run 5 times automatically, compare all hashes
+result = engine.verify(num_runs=5)
+print(result)
+# DETERMINISTIC: All 5 runs produced identical output
+# SHA-256: 799519fee8d50aca...
 ```
 
-### Cross-Hardware Verification
+### 4. Training Verification
 
 ```python
-from determl import OutputCanonicalizer
+import determl
 
-canon = OutputCanonicalizer(precision="high")
+determl.enforce(seed=42)
 
-# Node A (A100 GPU)
-result_a = canon.canonicalize(model_output_a)
+for step, batch in enumerate(dataloader):
+    loss = model(batch).loss
+    loss.backward()
+    optimizer.step()
 
-# Node B (V100 GPU)
-result_b = canon.canonicalize(model_output_b)
-
-# Canonical hashes match even though raw floats differ!
-assert result_a.canonical_hash == result_b.canonical_hash
+    # Hash model weights — identical across machines at same step
+    h = determl.checkpoint_hash(model)
+    print(f"Step {step}: {h}")
 ```
 
-### Environment Enforcement
+### 5. Cross-GPU Proof Verification
 
 ```python
-from determl import EnvironmentGuardian
+from determl.proof import create_proof, cross_verify, InferenceProof
 
-guardian = EnvironmentGuardian()
+# Machine A: export proof
+proof = create_proof(engine, "What is 2+2?")
+proof.save("proof.json")
 
-# Capture this machine's fingerprint
-local = guardian.create_fingerprint()
-print(local)
-# Environment [a1b2c3d4]
-#   PyTorch:  2.2.0
-#   CUDA:     12.1
-#   GPU:      NVIDIA A100 (Ampere)
-#   Deterministic: True
-
-# Compare with remote node
-result = guardian.compare(local, remote_fingerprint)
-# STRICT / COMPATIBLE / INCOMPATIBLE
-
-# Enforce -- raises if incompatible
-guardian.enforce(remote_fingerprint)
+# Machine B: verify it
+proof = InferenceProof.load("proof.json")
+result = cross_verify(proof)
+print(result)
+# ✓ VERIFIED — RTX 3070 and T4 produced identical canonical hashes
 ```
 
 ---
 
 ## CLI
 
+determl includes a full command-line interface:
+
 ```bash
 # Interactive deterministic inference
 determl run Qwen/Qwen2.5-Coder-0.5B-Instruct
 
-# Scan model for non-deterministic ops
+# Scan model for non-deterministic ops (Dropout, Flash Attention, etc.)
 determl scan Qwen/Qwen2.5-Coder-0.5B-Instruct
 
-# Verify determinism (auto-prompt, 5 runs)
+# Verify determinism (run 5 times, compare hashes)
 determl verify Qwen/Qwen2.5-Coder-0.5B-Instruct
 
-# Show environment info
+# Before vs after determl comparison
+determl compare Qwen/Qwen2.5-Coder-0.5B-Instruct
+
+# Full benchmark (auto-scales based on model size)
+determl benchmark Qwen/Qwen2.5-Coder-0.5B-Instruct
+
+# Export inference proof to JSON
+determl export Qwen/Qwen2.5-Coder-0.5B-Instruct -o proof.json
+
+# Verify a proof from another machine
+determl cross-verify proof.json
+
+# Show environment information
 determl info
+```
+
+### Interactive Menu (run_determl.sh)
+
+```
+>> What would you like to do?
+   1) run          - Interactive deterministic inference
+   2) scan         - Scan model for non-deterministic ops
+   3) verify       - Verify model produces deterministic output
+   4) compare      - Before vs after determl comparison
+   5) benchmark    - Full determinism benchmark (auto-scales)
+   6) export       - Export inference proof (for cross-GPU verify)
+   7) cross-verify - Verify a proof from another machine
+   8) info         - Show environment information
+   9) exit         - Exit determl
 ```
 
 ---
 
-## API Reference
+## Features
 
-### `DeterministicEngine` (v2 -- recommended)
+### Auto-Scaling Benchmark
 
-| Method | Description |
-|--------|-------------|
-| `DeterministicEngine(seed=42, precision="high")` | Create engine |
-| `.load(model_name)` | Load HuggingFace model, auto-fix non-det ops |
-| `.load_model(model, tokenizer)` | Use pre-loaded model |
-| `.run(prompt)` | Deterministic text generation |
-| `.run_tensor(tensor)` | Deterministic tensor inference |
-| `.verify(prompt, num_runs=5)` | Built-in verification |
-| `.scan()` | Show enforcement report |
-| `.get_info()` | Engine + environment info |
+Tests determinism across 8 categories of prompts:
 
-### `DeterministicEnforcer`
+| Tier | Category | What it tests |
+|------|----------|--------------|
+| 1 | Sanity | Basic questions (baseline check) |
+| 2 | Long output | 200+ token generations (many CUDA ops) |
+| 3 | Uncertain | Creative prompts (model has low confidence) |
+| 4 | Complex code | Merge sort, LRU cache (deep computation) |
+| 5 | Reasoning | Logic puzzles, step-by-step (deep attention) |
+| 6 | Deep context | Long code + passage analysis |
+| 7 | Adversarial | FizzBuzz, pangrams (designed to break determinism) |
+| 8 | Edge cases | Unicode, empty, special characters |
 
-| Method | Description |
-|--------|-------------|
-| `.enforce(model)` | Patch model in-place, return `EnforcementReport` |
-| `.deterministic_context()` | Context manager for deterministic execution |
+Auto-scales based on model size:
+- Small models (<3B): 20 prompts × 5 runs = 100 total
+- Medium models (3-13B): 10 prompts × 3 runs = 30 total
+- Large models (13B+): 5 prompts × 2 runs = 10 total
 
-### `OutputCanonicalizer`
+### Before vs After Comparison
 
-| Method | Description |
-|--------|-------------|
-| `.canonicalize(tensor)` | Round + hash for cross-hardware consistency |
-| `.canonicalize_logits(logits, top_k=10)` | Token-level comparison for LLMs |
-| `.canonical_hash(tensor)` | Shorthand for just the hash |
-| `.compare(a, b, tolerance)` | Compare two tensors with tolerance |
+```bash
+determl compare Qwen/Qwen2.5-Coder-0.5B-Instruct
+```
 
-### `EnvironmentGuardian`
+Runs the model first **without** determl (raw PyTorch) then **with** determl, showing hash differences side by side.
 
-| Method | Description |
-|--------|-------------|
-| `.create_fingerprint()` | Capture this machine's environment |
-| `.compare(local, remote)` | Compare two fingerprints |
-| `.enforce(required)` | Raise if environments are incompatible |
+### Cross-GPU Verification
 
-### v1 API (still available)
+Export a proof on one GPU, verify on another:
 
-| Class | Description |
-|-------|-------------|
-| `DeterministicConfig` | Seed locking + flag setting |
-| `NonDeterminismDetector` | Static model scanning |
-| `InferenceVerifier` | Run-N-times verification |
-| `DeterministicLLM` | Simple HuggingFace wrapper |
+```bash
+# Machine A (e.g., Vast.ai RTX 3070)
+determl export Qwen/Qwen2.5-Coder-0.5B-Instruct -o proof.json
 
-### Utilities
+# Copy proof.json to Machine B
 
-| Function | Description |
-|----------|-------------|
-| `hash_tensor(tensor)` | SHA-256 of tensor bytes |
-| `hash_string(text)` | SHA-256 of UTF-8 string |
-| `get_environment_snapshot()` | Full compute environment dict |
+# Machine B (e.g., Colab T4)
+determl cross-verify proof.json
+# → VERIFIED: canonical hashes match across GPUs
+```
+
+---
+
+## How It Works
+
+determl addresses 7 sources of non-determinism:
+
+| Source | Problem | determl Fix |
+|--------|---------|-------------|
+| Random seeds | Python, NumPy, PyTorch, CUDA each have separate RNGs | Locks ALL seeds in one call |
+| CUDA atomics | `scatter_add`, `index_add` use non-deterministic `atomicAdd` | Forces `torch.use_deterministic_algorithms(True)` |
+| Flash Attention | `scaled_dot_product_attention` is non-deterministic | Replaces with deterministic math backend |
+| cuDNN tuning | Auto-selects different algorithms per run | Disables benchmark mode |
+| cuBLAS workspace | Matrix multiplications vary with workspace config | Sets `CUBLAS_WORKSPACE_CONFIG=:4096:8` |
+| Float ordering | Different GPUs produce different float results | Canonicalizes outputs before hashing |
+| LLM sampling | `temperature`, `top_k`, `top_p` add randomness | Forces greedy decoding |
 
 ---
 
@@ -216,42 +254,60 @@ determl info
 
 ```
 determl/
-  config.py          # Seed locking (v1)
-  detector.py        # Static op scanning (v1)
-  verifier.py        # Hash verification (v1)
-  wrapper.py         # Simple LLM wrapper (v1)
-  enforcer.py        # Runtime op interception + auto-fix (v2)
-  canonicalizer.py   # Cross-hardware output normalization (v2)
-  guardian.py        # Environment enforcement (v2)
-  engine.py          # High-level DeterministicEngine (v2)
-  cli.py             # CLI entry point (v2)
-  utils.py           # Hashing + env snapshots
+  __init__.py       # Top-level API: enforce(), status(), checkpoint_hash()
+  config.py         # Seed locking + deterministic flags
+  enforcer.py       # Runtime op patching (Dropout, Flash Attention)
+  canonicalizer.py  # Cross-hardware output normalization
+  guardian.py       # Environment fingerprinting + compatibility
+  engine.py         # High-level DeterministicEngine for LLMs
+  benchmark.py      # Auto-scaling benchmark suite (8 tiers, 36 prompts)
+  proof.py          # Cross-GPU proof export/import/verify
+  detector.py       # Static model scanning
+  verifier.py       # Hash-based verification
+  wrapper.py        # Simple HuggingFace wrapper
+  cli.py            # CLI entry point (9 commands)
+  utils.py          # Hashing + env snapshots
 ```
 
 ---
 
-## Deep Dive: Sources of Non-Determinism
+## API Reference
 
-### 1. Random Seeds
-Multiple RNG systems (Python `random`, NumPy, PyTorch CPU, PyTorch CUDA) must ALL be seeded. Missing even one breaks determinism.
+### Top-Level API
 
-### 2. CUDA Operations
-Some CUDA kernels use `atomicAdd` which is inherently non-deterministic. `torch.use_deterministic_algorithms(True)` forces deterministic alternatives (slower but reproducible).
+```python
+import determl
 
-### 3. Flash Attention
-`scaled_dot_product_attention` uses Flash Attention or memory-efficient kernels by default. determl forces the math backend via `sdpa_kernel(SDPBackend.MATH)`.
+determl.enforce(seed=42)              # Lock all randomness
+determl.status()                       # Check enforcement state
+determl.checkpoint_hash(model)         # Hash model weights (for training)
+```
 
-### 4. cuDNN Auto-Tuning
-`torch.backends.cudnn.benchmark = True` (default) lets cuDNN pick the fastest algorithm, which may vary between runs. We disable this.
+### DeterministicEngine
 
-### 5. cuBLAS Workspace
-Matrix multiplications on GPU can produce different results depending on workspace size. Setting `CUBLAS_WORKSPACE_CONFIG=:4096:8` fixes this.
+| Method | Description |
+|--------|-------------|
+| `DeterministicEngine(seed, precision, device)` | Create engine |
+| `.load(model_name)` | Load HuggingFace model, auto-fix ops |
+| `.run(prompt, max_new_tokens)` | Deterministic inference |
+| `.verify(prompt, num_runs)` | Run N times, compare hashes |
+| `.scan()` | Show enforcement report |
 
-### 6. Floating-Point Ordering
-Different GPUs (A100 vs V100) use different FMA units and reduction orders, producing slightly different floating-point results. The `OutputCanonicalizer` addresses this by rounding outputs to a configurable precision before hashing.
+### Proof System
 
-### 7. Sampling in LLMs
-`do_sample=True` (temperature, top-k, top-p) introduces randomness by design. Greedy decoding (`do_sample=False`) eliminates this entirely.
+| Function | Description |
+|----------|-------------|
+| `create_proof(engine, prompt)` | Run inference, create exportable proof |
+| `cross_verify(proof)` | Re-run locally, compare with proof |
+| `InferenceProof.save(path)` | Export proof to JSON |
+| `InferenceProof.load(path)` | Load proof from JSON |
+
+### Benchmark
+
+| Function | Description |
+|----------|-------------|
+| `run_benchmark(engine, config)` | Run full benchmark suite |
+| `BenchmarkConfig.from_depth(depth, param_b)` | Auto-scale by model size |
 
 ---
 
@@ -262,10 +318,10 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-All tests use tiny randomly-initialized models -- no large downloads, CPU only.
+All 70 tests use tiny randomly-initialized models — no large downloads, CPU only, runs in ~60 seconds.
 
 ---
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

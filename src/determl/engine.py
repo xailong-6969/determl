@@ -22,11 +22,16 @@ Usage:
 from __future__ import annotations
 
 import time
+import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
 import torch
 import torch.nn as nn
+
+# Suppress HuggingFace warnings about setting top_k/temperature when do_sample=False
+warnings.filterwarnings("ignore", message=".*do_sample.*is set to.*")
+warnings.filterwarnings("ignore", message=".*`do_sample` is set to `False`.*")
 
 from determl.config import DeterministicConfig
 from determl.enforcer import DeterministicEnforcer, EnforcementReport
