@@ -133,6 +133,17 @@ print(result.text)            # The generated text
 print(result.canonical_hash)  # SHA-256 hash — identical across GPUs
 ```
 
+**For large models across multiple GPUs:**
+
+```python
+# Models too large for a single GPU — automatically splits across all available GPUs
+engine = DeterministicEngine(seed=42)
+engine.load("<model>", device_map="auto")
+
+# Everything else works the same
+result = engine.run("Write hello world in Python")
+```
+
 ### 3. Verify Determinism
 
 ```python
@@ -415,7 +426,15 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-All 70 tests use tiny randomly-initialized models — no large downloads, CPU only, runs in ~60 seconds.
+### Supported Devices
+
+| Device | Status |
+|--------|--------|
+| NVIDIA GPUs (T4, V100, A100, RTX 3070/4090, etc.) | Fully supported |
+| CPU | Supported |
+| Multi-GPU (device_map="auto") | Supported |
+| AMD GPUs (ROCm) | Untested |
+| Apple Silicon (MPS) | Untested |
 
 ---
 
