@@ -35,6 +35,11 @@ warnings.filterwarnings("ignore", message=".*`do_sample` is set to `False`.*")
 warnings.filterwarnings("ignore", message=".*max_new_tokens.*max_length.*")
 warnings.filterwarnings("ignore", message=".*generation flags are not valid.*")
 
+# Also suppress via logging (HuggingFace uses loggers, not warnings)
+import logging
+logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)
+logging.getLogger("transformers.generation.configuration_utils").setLevel(logging.ERROR)
+
 from determl.config import DeterministicConfig
 from determl.enforcer import DeterministicEnforcer, EnforcementReport
 from determl.canonicalizer import OutputCanonicalizer, Precision
@@ -79,8 +84,8 @@ class DeterministicResult:
         if self.text is not None:
             preview = self.text[:100] + "..." if len(self.text) > 100 else self.text
             lines.append(f"Output: {preview}")
-        lines.append(f"Canonical hash: {self.canonical_hash[:32]}...")
-        lines.append(f"Raw hash:       {self.raw_hash[:32]}...")
+        lines.append(f"Canonical hash: {self.canonical_hash}")
+        lines.append(f"Raw hash:       {self.raw_hash}")
         lines.append(f"Precision: {self.precision} | Seed: {self.seed}")
         lines.append(f"Time: {self.elapsed_seconds:.3f}s")
         return "\n".join(lines)
