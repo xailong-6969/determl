@@ -28,7 +28,7 @@ determl.enforce()  # Everything is now deterministic.
 ### Quick Start (recommended)
 
 ```bash
-git clone -b v2-enforcement https://github.com/xailong-6969/determl.git
+git clone https://github.com/xailong-6969/determl.git
 cd determl
 bash run_determl.sh
 ```
@@ -36,14 +36,14 @@ bash run_determl.sh
 The script automatically:
 1. Creates a virtual environment
 2. Installs determl + all dependencies
-3. Detects your GPU
+3. Detects your GPU/CPU
 4. Launches the interactive menu
 
 ### Manual Install
 
 ```bash
 # Clone
-git clone -b v2-enforcement https://github.com/xailong-6969/determl.git
+git clone https://github.com/xailong-6969/determl.git
 cd determl
 
 # Recommended — includes HuggingFace model support (load any model by name)
