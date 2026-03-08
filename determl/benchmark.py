@@ -98,12 +98,10 @@ def get_all_prompts() -> list[tuple[str, str]]:
     return result
 
 
-def _short_prompt(prompt: str, max_len: int = 40) -> str:
+def _short_prompt(prompt: str, max_len: int = 0) -> str:
     """Get a clean single-line summary of a prompt for display."""
     # Take first line only (multiline prompts like the Fibonacci one)
     first_line = prompt.split("\n")[0].strip()
-    if len(first_line) > max_len:
-        return first_line[:max_len - 3] + "..."
     return first_line
 
 
