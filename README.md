@@ -293,7 +293,7 @@ Only **one** `proof.json` is created. Machine B does not create its own — it r
 
 ```bash
 # Run this on both Machine A and Machine B:
-git clone -b v2-enforcement https://github.com/xailong-6969/determl.git
+git clone https://github.com/xailong-6969/determl.git
 cd determl
 pip install -e ".[transformers]"
 ```
