@@ -83,6 +83,7 @@ determl run <model>            # Interactive inference — type prompts, get det
 determl verify <model>         # Verify determinism — runs 5 times, compares hashes
 determl benchmark <model>      # Full stress test with 36 prompts across 8 categories
 determl compare <model>        # Side-by-side: without determl vs with determl
+determl export <model> -o proof.json   # Export proof for cross-GPU verification
 determl info                   # Show your GPU and environment details
 ```
 
