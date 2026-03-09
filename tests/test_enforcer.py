@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import pytest
 
-from determl.enforcer import (
+from detinfer.enforcer import (
     DeterministicEnforcer,
     EnforcementReport,
     FixAction,

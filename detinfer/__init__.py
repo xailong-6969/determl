@@ -6,7 +6,7 @@ Detect, prevent, and ENFORCE determinism in ML inference and training.
 v2: Real enforcement, not just convenience wrappers.
 
 Quick start:
-    import determl
+    import detinfer
     determl.enforce()  # One line. Everything is now deterministic.
 """
 
@@ -18,18 +18,18 @@ from typing import Optional
 import torch
 
 # Core (always available)
-from determl.config import DeterministicConfig
-from determl.detector import NonDeterminismDetector
-from determl.verifier import InferenceVerifier
-from determl.enforcer import DeterministicEnforcer
-from determl.canonicalizer import OutputCanonicalizer
-from determl.guardian import EnvironmentGuardian
-from determl.engine import DeterministicEngine
-from determl.utils import hash_tensor, hash_string, get_environment_snapshot
+from detinfer.config import DeterministicConfig
+from detinfer.detector import NonDeterminismDetector
+from detinfer.verifier import InferenceVerifier
+from detinfer.enforcer import DeterministicEnforcer
+from detinfer.canonicalizer import OutputCanonicalizer
+from detinfer.guardian import EnvironmentGuardian
+from detinfer.engine import DeterministicEngine
+from detinfer.utils import hash_tensor, hash_string, get_environment_snapshot
 
 # Wrapper requires transformers -- import lazily to avoid hard dependency
 try:
-    from determl.wrapper import DeterministicLLM
+    from detinfer.wrapper import DeterministicLLM
 except ImportError:
     DeterministicLLM = None
 
@@ -54,7 +54,7 @@ def enforce(seed: int = 42, warn_only: bool = True) -> DeterministicConfig:
     Works for both inference AND training.
 
     Usage:
-        import determl
+        import detinfer
         determl.enforce(seed=42)
 
         # Now ANY PyTorch code is deterministic:

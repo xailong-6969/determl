@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import pytest
 
-from determl.detector import NonDeterminismDetector, Severity
+from detinfer.detector import NonDeterminismDetector, Severity
 
 
 class CleanModel(nn.Module):

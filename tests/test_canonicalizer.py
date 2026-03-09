@@ -3,7 +3,7 @@
 import torch
 import pytest
 
-from determl.canonicalizer import (
+from detinfer.canonicalizer import (
     OutputCanonicalizer,
     Precision,
 )

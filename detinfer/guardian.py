@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from determl.utils import get_environment_snapshot, hash_string
+from detinfer.utils import get_environment_snapshot, hash_string
 
 
 class CompatibilityLevel(str, Enum):

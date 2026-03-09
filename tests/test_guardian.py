@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from determl.guardian import (
+from detinfer.guardian import (
     EnvironmentGuardian,
     EnvironmentFingerprint,
     CompatibilityLevel,

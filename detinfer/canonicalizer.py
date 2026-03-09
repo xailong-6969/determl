@@ -18,7 +18,7 @@ from typing import Any
 
 import torch
 
-from determl.utils import hash_tensor, hash_string
+from detinfer.utils import hash_tensor, hash_string
 
 
 class Precision(str, Enum):

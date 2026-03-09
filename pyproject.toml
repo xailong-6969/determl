@@ -3,16 +3,24 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "determl"
+name = "detinfer"
 version = "0.2.0"
-description = "Detect, prevent, and verify non-determinism in ML inference"
+description = "detinfer (Deterministic Inference) — enforce, verify and prove determinism in ML inference across hardware"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
+keywords = ["machine-learning", "determinism", "reproducibility", "pytorch", "llm", "inference", "verification"]
+
 dependencies = [
     "torch>=2.0.0",
     "numpy>=1.24.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/xailong-6969/detinfer"
+Repository = "https://github.com/xailong-6969/detinfer"
+Documentation = "https://github.com/xailong-6969/detinfer/blob/main/docs/determinism-spec.md"
+
 
 [project.optional-dependencies]
 transformers = ["transformers>=4.30.0"]
@@ -24,7 +32,7 @@ dev = [
 [tool.setuptools.packages.find]
 
 [project.scripts]
-determl = "determl.cli:main"
+detinfer = "detinfer.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

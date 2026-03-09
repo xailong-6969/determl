@@ -19,7 +19,7 @@ from typing import Any, Generator
 import torch
 import torch.nn as nn
 
-from determl.config import DeterministicConfig
+from detinfer.config import DeterministicConfig
 
 
 class FixAction(str, Enum):

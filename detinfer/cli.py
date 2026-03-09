@@ -23,7 +23,7 @@ import torch
 
 def cmd_info(args: argparse.Namespace) -> None:
     """Show environment information."""
-    from determl.guardian import EnvironmentGuardian
+    from detinfer.guardian import EnvironmentGuardian
 
     guardian = EnvironmentGuardian()
     fingerprint = guardian.create_fingerprint()
@@ -32,7 +32,7 @@ def cmd_info(args: argparse.Namespace) -> None:
 
 def cmd_scan(args: argparse.Namespace) -> None:
     """Scan a model for non-deterministic ops."""
-    from determl.engine import DeterministicEngine
+    from detinfer.engine import DeterministicEngine
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -45,7 +45,7 @@ def cmd_scan(args: argparse.Namespace) -> None:
 
 def cmd_verify(args: argparse.Namespace) -> None:
     """Verify a model produces deterministic output."""
-    from determl.engine import DeterministicEngine
+    from detinfer.engine import DeterministicEngine
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -65,8 +65,8 @@ def cmd_verify(args: argparse.Namespace) -> None:
 
 def cmd_benchmark(args: argparse.Namespace) -> None:
     """Run the auto-scaling determinism benchmark."""
-    from determl.engine import DeterministicEngine
-    from determl.benchmark import BenchmarkConfig, run_benchmark, estimate_param_count
+    from detinfer.engine import DeterministicEngine
+    from detinfer.benchmark import BenchmarkConfig, run_benchmark, estimate_param_count
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -90,8 +90,8 @@ def cmd_benchmark(args: argparse.Namespace) -> None:
 
 def cmd_export(args: argparse.Namespace) -> None:
     """Export an inference proof to a JSON file."""
-    from determl.engine import DeterministicEngine
-    from determl.proof import create_proof
+    from detinfer.engine import DeterministicEngine
+    from detinfer.proof import create_proof
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -115,7 +115,7 @@ def cmd_export(args: argparse.Namespace) -> None:
 
 def cmd_cross_verify(args: argparse.Namespace) -> None:
     """Verify an inference proof on this machine."""
-    from determl.proof import InferenceProof, cross_verify
+    from detinfer.proof import InferenceProof, cross_verify
 
     print(f"Loading proof from: {args.proof_file}")
     proof = InferenceProof.load(args.proof_file)
@@ -195,7 +195,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
     print("  WITH determl (enforcement ON)")
     print("=" * 60)
 
-    from determl.engine import DeterministicEngine
+    from detinfer.engine import DeterministicEngine
 
     engine = DeterministicEngine(
         seed=args.seed,
@@ -234,7 +234,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
 
 def cmd_run(args: argparse.Namespace) -> None:
     """Interactive deterministic inference."""
-    from determl.engine import DeterministicEngine
+    from detinfer.engine import DeterministicEngine
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -263,7 +263,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="determl",
+        prog="detinfer",
         description="Deterministic ML Inference Tool",
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")

@@ -4,10 +4,10 @@
 #
 # Inspired by https://github.com/gensyn-ai/rl-swarm run_rl_swarm.sh. One script that:
 #   1. Creates a Python virtual environment
-#   2. Installs determl + all dependencies
+#   2. Installs detinfer + all dependencies
 #   3. Auto-detects GPU/CPU
 #   4. Prompts for a HuggingFace model name
-#   5. Launches determl in interactive mode
+#   5. Launches detinfer in interactive mode
 # ============================================================================
 set -euo pipefail
 
@@ -118,7 +118,7 @@ while true; do
     echo "   1) run          - Interactive deterministic inference"
     echo "   2) scan         - Scan model for non-deterministic ops"
     echo "   3) verify       - Verify model produces deterministic output"
-    echo "   4) compare      - Before vs after determl comparison"
+    echo "   4) compare      - Before vs after detinfer comparison"
     echo "   5) benchmark    - Full determinism benchmark (auto-scales)"
     echo "   6) export       - Export inference proof (for cross-GPU verify)"
     echo "   7) cross-verify - Verify a proof from another machine"
@@ -131,35 +131,35 @@ while true; do
     case "${MODE_CHOICE:-1}" in
         1|run)
             echo_green ">> Starting interactive mode..."
-            determl run "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
+            detinfer run "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
             ;;
         2|scan)
             echo_green ">> Scanning model..."
-            determl scan "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
+            detinfer scan "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
             ;;
         3|verify)
             echo_green ">> Verifying determinism..."
-            determl verify "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
+            detinfer verify "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
             ;;
         4|compare)
             echo_green ">> Running before/after comparison..."
-            determl compare "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
+            detinfer compare "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
             ;;
         5|benchmark)
             echo_green ">> Running benchmark..."
-            determl benchmark "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
+            detinfer benchmark "$MODEL_NAME" --seed "$SEED" --device "$DEVICE"
             ;;
         6|export)
             echo_green ">> Exporting proof..."
-            determl export "$MODEL_NAME" --seed "$SEED" --device "$DEVICE" -o proof.json
+            detinfer export "$MODEL_NAME" --seed "$SEED" --device "$DEVICE" -o proof.json
             ;;
         7|cross-verify)
             echo -en "${GREEN}>> Enter proof file path: ${RESET}"
             read -p "" PROOF_FILE
-            determl cross-verify "${PROOF_FILE:-proof.json}"
+            detinfer cross-verify "${PROOF_FILE:-proof.json}"
             ;;
         8|info)
-            determl info
+            detinfer info
             ;;
         9|exit|quit|q)
             echo_green ">> Done!"

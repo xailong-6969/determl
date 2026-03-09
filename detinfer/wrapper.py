@@ -19,9 +19,9 @@ except ImportError as e:
         "Install it with: pip install determl[transformers]"
     ) from e
 
-from determl.config import DeterministicConfig
-from determl.utils import hash_string, get_environment_snapshot
-from determl.verifier import InferenceVerifier
+from detinfer.config import DeterministicConfig
+from detinfer.utils import hash_string, get_environment_snapshot
+from detinfer.verifier import InferenceVerifier
 
 
 class DeterministicLLM:

@@ -13,7 +13,7 @@ try:
 except ImportError:
     HAS_TRANSFORMERS = False
 
-from determl.config import DeterministicConfig
+from detinfer.config import DeterministicConfig
 
 
 # Skip entire module if transformers is not installed
@@ -49,7 +49,7 @@ class TestDeterministicLLM:
 
     def test_identical_outputs_across_runs(self):
         """Same prompt should produce identical output every time."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -66,7 +66,7 @@ class TestDeterministicLLM:
 
     def test_generate_with_hash(self):
         """generate_with_hash should return text + SHA-256 hashes."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -82,7 +82,7 @@ class TestDeterministicLLM:
 
     def test_hash_consistency(self):
         """Hashes should be identical across runs."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -97,7 +97,7 @@ class TestDeterministicLLM:
 
     def test_verify_method(self):
         """Built-in verify() should confirm determinism."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -111,7 +111,7 @@ class TestDeterministicLLM:
 
     def test_get_info(self):
         """get_info should return model and environment data."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -126,7 +126,7 @@ class TestDeterministicLLM:
 
     def test_different_prompts_different_outputs(self):
         """Different prompts should (very likely) produce different outputs."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -143,7 +143,7 @@ class TestDeterministicLLM:
 
     def test_repr(self):
         """repr should be informative."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         model, tokenizer = _make_tiny_gpt2()
         llm = DeterministicLLM(
@@ -156,7 +156,7 @@ class TestDeterministicLLM:
 
     def test_no_args_raises(self):
         """Passing neither model_name nor model should raise ValueError."""
-        from determl.wrapper import DeterministicLLM
+        from detinfer.wrapper import DeterministicLLM
 
         with pytest.raises(ValueError, match="Either model_name"):
             DeterministicLLM(seed=42)

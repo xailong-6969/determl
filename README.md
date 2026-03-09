@@ -17,7 +17,7 @@ This breaks everything that requires **verifiable computation**: decentralized A
 **determl fixes this.** One import, one function call.
 
 ```python
-import determl
+import detinfer
 determl.enforce()  # Everything is now deterministic.
 ```
 
@@ -84,18 +84,18 @@ After installation, you can use determl in two ways:
 ```bash
 # Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct, etc.
 
-determl run <model>            # Interactive inference — type prompts, get deterministic output
-determl verify <model>         # Verify determinism — runs 5 times, compares hashes
-determl benchmark <model>      # Full stress test with 36 prompts across 8 categories
-determl compare <model>        # Side-by-side: without determl vs with determl
-determl export <model> -o proof.json   # Export proof for cross-GPU verification
-determl info                   # Show your GPU and environment details
+detinfer run <model>            # Interactive inference — type prompts, get deterministic output
+detinfer verify <model>         # Verify determinism — runs 5 times, compares hashes
+detinfer benchmark <model>      # Full stress test with 36 prompts across 8 categories
+detinfer compare <model>        # Side-by-side: without determl vs with determl
+detinfer export <model> -o proof.json   # Export proof for cross-GPU verification
+detinfer info                   # Show your GPU and environment details
 ```
 
 **From Python (in your own code):**
 
 ```python
-import determl
+import detinfer
 
 # One line — locks all randomness globally
 determl.enforce(seed=42)
@@ -113,7 +113,7 @@ optimizer.step()                # weight updates
 ### 1. One-Line Enforcement (for any ML code)
 
 ```python
-import determl
+import detinfer
 
 # Lock all sources of randomness globally
 determl.enforce(seed=42)
@@ -163,7 +163,7 @@ print(result)
 ### 4. Training Verification
 
 ```python
-import determl
+import detinfer
 
 determl.enforce(seed=42)
 
@@ -195,28 +195,28 @@ determl includes a full command-line interface:
 #   gpt2
 
 # Interactive deterministic inference
-determl run <model>
+detinfer run <model>
 
 # Scan model for non-deterministic ops (Dropout, Flash Attention, etc.)
-determl scan <model>
+detinfer scan <model>
 
 # Verify determinism (run 5 times, compare hashes)
-determl verify <model>
+detinfer verify <model>
 
 # Before vs after determl comparison
-determl compare <model>
+detinfer compare <model>
 
 # Full benchmark (auto-scales based on model size)
-determl benchmark <model>
+detinfer benchmark <model>
 
 # Export inference proof to JSON
-determl export <model> -o proof.json
+detinfer export <model> -o proof.json
 
 # Verify a proof from another machine
-determl cross-verify proof.json
+detinfer cross-verify proof.json
 
 # Show environment information
-determl info
+detinfer info
 ```
 
 ### Interactive Menu (run_determl.sh)
@@ -261,7 +261,7 @@ Auto-scales based on model size:
 ### Before vs After Comparison
 
 ```bash
-determl compare <model>
+detinfer compare <model>
 ```
 
 Runs the model first **without** determl (raw PyTorch) then **with** determl, showing hash differences side by side.
@@ -306,7 +306,7 @@ pip install -e ".[transformers]"
 **Step 2: Export a proof on Machine A**
 
 ```bash
-determl export <model> -o proof.json
+detinfer export <model> -o proof.json
 
 # This will:
 #   1. Load the model
@@ -322,7 +322,7 @@ Copy `proof.json` from Machine A to Machine B however you prefer — `scp`, file
 
 ```bash
 cd determl
-determl cross-verify proof.json
+detinfer cross-verify proof.json
 ```
 
 **What you'll see:**
@@ -390,7 +390,7 @@ determl/
 ### Top-Level API
 
 ```python
-import determl
+import detinfer
 
 determl.enforce(seed=42)              # Lock all randomness
 determl.status()                       # Check enforcement state
@@ -443,7 +443,7 @@ pytest tests/ -v
 | CPU inference | **Fully supported** | Fully deterministic |
 | NVIDIA GPU (single) | **Fully supported** | T4, V100, A100, RTX 3070/4090, etc. |
 | HuggingFace CausalLM | **Fully supported** | GPT-2, Qwen, TinyLlama, LLaMA, etc. |
-| Cross-GPU canonical hashes | **Fully supported** | Via `determl export` + `determl cross-verify` |
+| Cross-GPU canonical hashes | **Fully supported** | Via `detinfer export` + `detinfer cross-verify` |
 | bf16 inference | Partial | Hardware-dependent rounding; canonical hash may differ across GPU generations |
 | Multi-GPU (`device_map="auto"`) | Partial | Inference works; very large models may have split-order edge cases |
 | Flash Attention | Partial | Auto-replaced with MATH backend; may reduce throughput |
