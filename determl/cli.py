@@ -153,7 +153,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
-        torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+        dtype=torch.float16 if device == "cuda" else torch.float32,
     )
     model.to(device)
     model.eval()
@@ -180,8 +180,8 @@ def cmd_compare(args: argparse.Namespace) -> None:
     unique_raw = len(set(raw_hashes))
     if unique_raw == 1:
         print(f"\n  Result: All {num_runs} hashes match")
-        print("  (Greedy decoding on this GPU happens to be stable,")
-        print("   but internal float values may still drift across different GPUs)")
+        print(f"  (Greedy decoding on {device.upper()} happens to be stable,")
+        print(f"   but internal float values may still drift across different hardware)")
     else:
         print(f"\n  Result: NON-DETERMINISTIC — {unique_raw} different hashes!")
 
