@@ -1,10 +1,10 @@
 """
-determl.enforcer -- Runtime Determinism Enforcement
+detinfer.enforcer -- Runtime Determinism Enforcement
 
 Unlike config.py which just sets flags, this module actively patches models
 to REPLACE non-deterministic operations with deterministic alternatives.
 
-This is the core differentiator of determl v2.
+This is the core differentiator of detinfer v2.
 """
 
 from __future__ import annotations
@@ -321,3 +321,4 @@ class DeterministicEnforcer:
                 else:
                     parent = getattr(parent, part)
             setattr(parent, parts[-1], new_module)
+

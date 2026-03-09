@@ -1,5 +1,5 @@
 """
-determl.wrapper — Deterministic LLM Wrapper
+detinfer.wrapper — Deterministic LLM Wrapper
 
 Wraps any HuggingFace causal language model with deterministic settings:
 greedy decoding, seed locking, and batch isolation.
@@ -16,7 +16,7 @@ try:
 except ImportError as e:
     raise ImportError(
         "The 'transformers' package is required for DeterministicLLM. "
-        "Install it with: pip install determl[transformers]"
+        "Install it with: pip install detinfer[transformers]"
     ) from e
 
 from detinfer.config import DeterministicConfig
@@ -212,3 +212,4 @@ class DeterministicLLM:
             f"DeterministicLLM(model='{self.model_name}', "
             f"seed={self.seed}, device='{self.device}')"
         )
+

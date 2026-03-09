@@ -1,4 +1,4 @@
-# determl — Deterministic ML Library
+# detinfer — Deterministic ML Library
 
 **Enforce determinism in ML inference and training. One line of code.**
 
@@ -14,11 +14,11 @@ ML models give **different outputs every time you run them** — even with the e
 
 This breaks everything that requires **verifiable computation**: decentralized AI networks, reproducible research, CI/CD for ML, audit trails.
 
-**determl fixes this.** One import, one function call.
+**detinfer Fixes this.** One import, one function call.
 
 ```python
 import detinfer
-determl.enforce()  # Everything is now deterministic.
+detinfer.enforce()  # Everything is now deterministic.
 ```
 
 ---
@@ -28,14 +28,14 @@ determl.enforce()  # Everything is now deterministic.
 ### Quick Start (recommended)
 
 ```bash
-git clone https://github.com/xailong-6969/determl.git
-cd determl
+git clone https://github.com/xailong-6969/detinfer.git
+cd detinfer
 bash run_determl.sh
 ```
 
 The script automatically:
 1. Creates a virtual environment
-2. Installs determl + all dependencies
+2. Installs detinfer + all dependencies
 3. Detects your GPU/CPU
 4. Launches the interactive menu
 
@@ -43,8 +43,8 @@ The script automatically:
 
 ```bash
 # Clone
-git clone https://github.com/xailong-6969/determl.git
-cd determl
+git clone https://github.com/xailong-6969/detinfer.git
+cd detinfer
 
 # Create and activate a virtual environment (required on Debian/Ubuntu)
 python3 -m venv venv
@@ -77,7 +77,7 @@ The interactive menu is already open — select an option and follow the prompts
 
 ### If you installed manually via `pip install`
 
-After installation, you can use determl in two ways:
+After installation, you can use detinfer in two ways:
 
 **From the terminal (CLI):**
 
@@ -87,7 +87,7 @@ After installation, you can use determl in two ways:
 detinfer run <model>            # Interactive inference — type prompts, get deterministic output
 detinfer verify <model>         # Verify determinism — runs 5 times, compares hashes
 detinfer benchmark <model>      # Full stress test with 36 prompts across 8 categories
-detinfer compare <model>        # Side-by-side: without determl vs with determl
+detinfer compare <model>        # Side-by-side: without detinfer vs with detinfer
 detinfer export <model> -o proof.json   # Export proof for cross-GPU verification
 detinfer info                   # Show your GPU and environment details
 ```
@@ -98,7 +98,7 @@ detinfer info                   # Show your GPU and environment details
 import detinfer
 
 # One line — locks all randomness globally
-determl.enforce(seed=42)
+detinfer.enforce(seed=42)
 
 # Now any PyTorch code is deterministic:
 output = model(input)           # inference
@@ -116,7 +116,7 @@ optimizer.step()                # weight updates
 import detinfer
 
 # Lock all sources of randomness globally
-determl.enforce(seed=42)
+detinfer.enforce(seed=42)
 
 # Now ANY PyTorch code is deterministic:
 output = model(input)        # inference — deterministic
@@ -127,7 +127,7 @@ optimizer.step()             # weight updates — deterministic
 ### 2. DeterministicEngine (for LLM inference)
 
 ```python
-from determl import DeterministicEngine
+from detinfer import DeterministicEngine
 
 # Load any HuggingFace model + auto-fix all non-deterministic ops
 engine = DeterministicEngine(seed=42)
@@ -165,7 +165,7 @@ print(result)
 ```python
 import detinfer
 
-determl.enforce(seed=42)
+detinfer.enforce(seed=42)
 
 for step, batch in enumerate(dataloader):
     loss = model(batch).loss
@@ -173,7 +173,7 @@ for step, batch in enumerate(dataloader):
     optimizer.step()
 
     # Hash model weights — identical across machines at same step
-    h = determl.checkpoint_hash(model)
+    h = detinfer.checkpoint_hash(model)
     print(f"Step {step}: {h}")
 ```
 
@@ -185,7 +185,7 @@ Prove that two different GPUs produce the same output — see the [Cross-GPU Ver
 
 ## CLI
 
-determl includes a full command-line interface:
+detinfer includes a full command-line interface:
 
 ```bash
 # Replace <model> with any HuggingFace model name, e.g.:
@@ -203,7 +203,7 @@ detinfer scan <model>
 # Verify determinism (run 5 times, compare hashes)
 detinfer verify <model>
 
-# Before vs after determl comparison
+# Before vs after detinfer comparison
 detinfer compare <model>
 
 # Full benchmark (auto-scales based on model size)
@@ -226,12 +226,12 @@ detinfer info
    1) run          - Interactive deterministic inference
    2) scan         - Scan model for non-deterministic ops
    3) verify       - Verify model produces deterministic output
-   4) compare      - Before vs after determl comparison
+   4) compare      - Before vs after detinfer comparison
    5) benchmark    - Full determinism benchmark (auto-scales)
    6) export       - Export inference proof (for cross-GPU verify)
    7) cross-verify - Verify a proof from another machine
    8) info         - Show environment information
-   9) exit         - Exit determl
+   9) exit         - Exit detinfer
 ```
 
 ---
@@ -264,7 +264,7 @@ Auto-scales based on model size:
 detinfer compare <model>
 ```
 
-Runs the model first **without** determl (raw PyTorch) then **with** determl, showing hash differences side by side.
+Runs the model first **without** detinfer (raw PyTorch) then **with** detinfer, showing hash differences side by side.
 
 ### Cross-GPU Verification Guide
 
@@ -291,15 +291,15 @@ Only **one** `proof.json` is created. Machine B does not create its own — it r
 
 **What you need:**
 - Two machines with GPUs (e.g., a cloud GPU instance + another server, or any two machines)
-- Both machines must have determl installed
+- Both machines must have detinfer installed
 - Both machines must use the same model
 
-**Step 1: Install determl on both machines**
+**Step 1: Install detinfer on both machines**
 
 ```bash
 # Run this on both Machine A and Machine B:
-git clone https://github.com/xailong-6969/determl.git
-cd determl
+git clone https://github.com/xailong-6969/detinfer.git
+cd detinfer
 pip install -e ".[transformers]"
 ```
 
@@ -321,7 +321,7 @@ Copy `proof.json` from Machine A to Machine B however you prefer — `scp`, file
 **Step 4: Verify on Machine B**
 
 ```bash
-cd determl
+cd detinfer
 detinfer cross-verify proof.json
 ```
 
@@ -350,9 +350,9 @@ If both canonical hashes match → the library works. Same model + same input = 
 
 ## How It Works
 
-determl addresses 7 sources of non-determinism:
+detinfer addresses 7 sources of non-determinism:
 
-| Source | Problem | determl Fix |
+| Source | Problem | detinfer Fix |
 |--------|---------|-------------|
 | Random seeds | Python, NumPy, PyTorch, CUDA each have separate RNGs | Locks ALL seeds in one call |
 | CUDA atomics | `scatter_add`, `index_add` use non-deterministic `atomicAdd` | Forces `torch.use_deterministic_algorithms(True)` |
@@ -367,7 +367,7 @@ determl addresses 7 sources of non-determinism:
 ## Architecture
 
 ```
-determl/
+detinfer/
   __init__.py       # Top-level API: enforce(), status(), checkpoint_hash()
   config.py         # Seed locking + deterministic flags
   enforcer.py       # Runtime op patching (Dropout, Flash Attention)
@@ -392,9 +392,9 @@ determl/
 ```python
 import detinfer
 
-determl.enforce(seed=42)              # Lock all randomness
-determl.status()                       # Check enforcement state
-determl.checkpoint_hash(model)         # Hash model weights (for training)
+detinfer.enforce(seed=42)              # Lock all randomness
+detinfer.status()                       # Check enforcement state
+detinfer.checkpoint_hash(model)         # Hash model weights (for training)
 ```
 
 ### DeterministicEngine
@@ -456,10 +456,12 @@ pytest tests/ -v
 | AMD GPUs (ROCm) | Untested | |
 | Apple Silicon (MPS) | Untested | |
 
-> For the full technical specification of what "deterministic" means in determl — including exact hash definitions, proof format, and operating modes — see [docs/determinism-spec.md](docs/determinism-spec.md).
+> For the full technical specification of what "deterministic" means in detinfer — including exact hash definitions, proof format, and operating modes — see [docs/determinism-spec.md](docs/determinism-spec.md).
 
 ---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+

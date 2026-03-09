@@ -1,4 +1,4 @@
-"""Tests for determl.enforcer -- DeterministicEnforcer."""
+"""Tests for detinfer.enforcer -- DeterministicEnforcer."""
 
 import torch
 import torch.nn as nn
@@ -122,3 +122,4 @@ class TestDeterministicEnforcer:
         # Should not crash
         x = torch.randn(1, 10)
         model(x)  # Should work fine
+

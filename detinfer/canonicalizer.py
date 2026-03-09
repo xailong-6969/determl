@@ -1,11 +1,11 @@
 """
-determl.canonicalizer -- Cross-Hardware Output Normalization
+detinfer.canonicalizer -- Cross-Hardware Output Normalization
 
 The reason two identical models on A100 vs V100 give different outputs
 is floating-point ordering. The canonicalizer normalizes outputs so
 they produce identical hashes across different hardware.
 
-This is what makes determl actually useful for decentralized AI --
+This is what makes detinfer actually useful for decentralized AI --
 not just "same output on same machine" but "provably same output
 across different nodes."
 """
@@ -227,3 +227,4 @@ class ComparisonResult:
                 f"MISMATCH: {self.reason}\n"
                 f"  Max diff: {self.max_diff:.2e}, Mean diff: {self.mean_diff:.2e}"
             )
+

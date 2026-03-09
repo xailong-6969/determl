@@ -1,5 +1,5 @@
 """
-determl.verifier — Inference Verifier
+detinfer.verifier — Inference Verifier
 
 Runs inference multiple times with seed resets, hashes every output,
 and compares them to prove bitwise reproducibility.
@@ -206,3 +206,4 @@ class InferenceVerifier:
             environment=get_environment_snapshot(),
             seed=seed,
         )
+

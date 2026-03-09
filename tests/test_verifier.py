@@ -1,4 +1,4 @@
-"""Tests for determl.verifier — InferenceVerifier.
+"""Tests for detinfer.verifier — InferenceVerifier.
 
 Uses tiny randomly-initialized models for fast CPU-only testing.
 No large model downloads required.
@@ -150,3 +150,4 @@ class TestInferenceVerifier:
 
         with pytest.raises(ValueError, match="Tokenizer required"):
             verifier.verify("test prompt")
+

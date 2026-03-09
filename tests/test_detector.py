@@ -1,4 +1,4 @@
-"""Tests for determl.detector — NonDeterminismDetector."""
+"""Tests for detinfer.detector — NonDeterminismDetector."""
 
 import torch
 import torch.nn as nn
@@ -126,3 +126,4 @@ class TestNonDeterminismDetector:
         report = self.detector.scan(model)
         report_str = str(report)
         assert "WARNING" in report_str
+

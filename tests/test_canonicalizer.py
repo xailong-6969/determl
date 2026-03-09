@@ -1,4 +1,4 @@
-"""Tests for determl.canonicalizer -- OutputCanonicalizer."""
+"""Tests for detinfer.canonicalizer -- OutputCanonicalizer."""
 
 import torch
 import pytest
@@ -124,3 +124,4 @@ class TestCanonicalResult:
         result_str = str(result)
         assert "Canonical" in result_str
         assert "high" in result_str
+

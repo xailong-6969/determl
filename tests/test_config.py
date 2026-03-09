@@ -1,4 +1,4 @@
-"""Tests for determl.config — DeterministicConfig seed locking."""
+"""Tests for detinfer.config — DeterministicConfig seed locking."""
 
 import os
 import random
@@ -112,3 +112,4 @@ class TestDeterministicConfig:
         config = DeterministicConfig(seed=42)
         result = config.apply()
         assert result is config
+

@@ -1,5 +1,5 @@
 """
-determl.benchmark -- Auto-scaling Determinism Benchmark
+detinfer.benchmark -- Auto-scaling Determinism Benchmark
 
 Provides a diverse set of test prompts across multiple categories,
 auto-scales based on model size to keep runtime practical:
@@ -203,7 +203,7 @@ class BenchmarkResult:
         lines = []
         lines.append("")
         lines.append("=" * 70)
-        lines.append("  DETERML BENCHMARK RESULTS")
+        lines.append("  detinfer BENCHMARK RESULTS")
         lines.append("=" * 70)
         lines.append(f"  Model:  {self.model_name}")
         lines.append(f"  GPU:    {self.gpu_name}")
@@ -305,3 +305,4 @@ def run_benchmark(
     result.elapsed_seconds = time.time() - start
 
     return result
+

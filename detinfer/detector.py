@@ -1,5 +1,5 @@
 """
-determl.detector — Non-Determinism Detector
+detinfer.detector — Non-Determinism Detector
 
 Scans a PyTorch model and reports which layers/operations are known
 to be non-deterministic on GPU. This helps you catch problems BEFORE
@@ -202,3 +202,4 @@ class NonDeterminismDetector:
             total_modules=total,
             findings=findings,
         )
+

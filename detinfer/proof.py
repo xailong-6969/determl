@@ -1,14 +1,14 @@
 """
-determl.proof -- Cross-GPU Verification Proofs
+detinfer.proof -- Cross-GPU Verification Proofs
 
 Export deterministic inference proofs from one machine and verify
-them on another. This is the core mechanism for proving that determl
+them on another. This is the core mechanism for proving that detinfer
 produces identical results across different hardware.
 
 Flow:
-  1. Machine A: determl export proof.json
+  1. Machine A: detinfer export proof.json
      → Runs inference, saves {model, seed, prompt, canonical_hash, env}
-  2. Machine B: determl cross-verify proof.json
+  2. Machine B: detinfer cross-verify proof.json
      → Loads proof, runs same inference, compares canonical hashes
      → MATCH = determinism proven across GPUs
 """
@@ -300,3 +300,4 @@ def cross_verify(proof: InferenceProof) -> CrossVerifyResult:
         output_tokens_match=(getattr(result, 'output_tokens_hash', '') == getattr(proof, 'output_tokens_hash', '')),
         elapsed_seconds=elapsed,
     )
+

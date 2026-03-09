@@ -1,7 +1,7 @@
 """
-determl.engine -- DeterministicEngine (High-Level API)
+detinfer.engine -- DeterministicEngine (High-Level API)
 
-This is the main user-facing class in determl v2. It combines:
+This is the main user-facing class in detinfer v2. It combines:
 - DeterministicConfig (seed locking)
 - DeterministicEnforcer (op interception)
 - OutputCanonicalizer (cross-hardware normalization)
@@ -9,7 +9,7 @@ This is the main user-facing class in determl v2. It combines:
 - InferenceVerifier (hash verification)
 
 Usage:
-    from determl import DeterministicEngine
+    from detinfer import DeterministicEngine
 
     engine = DeterministicEngine(seed=42)
     engine.load("Qwen/Qwen2.5-Coder-0.5B-Instruct")
@@ -102,7 +102,7 @@ class DeterministicResult:
 class DeterministicEngine:
     """End-to-end deterministic inference engine.
 
-    The main entry point for determl v2. Handles:
+    The main entry point for detinfer v2. Handles:
     1. Model loading with deterministic config
     2. Automatic op enforcement (replaces non-det ops)
     3. Output canonicalization for cross-hardware consistency
@@ -189,7 +189,7 @@ class DeterministicEngine:
         except ImportError as e:
             raise ImportError(
                 "The 'transformers' package is required for loading models by name. "
-                "Install it with: pip install determl[transformers]"
+                "Install it with: pip install detinfer[transformers]"
             ) from e
 
         self.model_name = model_name
@@ -473,3 +473,4 @@ class DeterministicEngine:
             except StopIteration:
                 return self.device
         return self.device
+

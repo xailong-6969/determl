@@ -1,14 +1,14 @@
 """
-determl.cli -- Command-Line Interface
+detinfer.cli -- Command-Line Interface
 
-Provides the `determl` command with subcommands:
-  determl run <model>              -- Interactive deterministic inference
-  determl scan <model>             -- Scan for non-deterministic ops
-  determl verify <model>           -- Verify determinism (auto-prompt)
-  determl compare <model>          -- Before/after determl comparison
-  determl export <model>           -- Export inference proof to JSON
-  determl cross-verify <proof.json> -- Verify proof on this machine
-  determl info                     -- Show environment info
+Provides the `detinfer` command with subcommands:
+  detinfer run <model>              -- Interactive deterministic inference
+  detinfer scan <model>             -- Scan for non-deterministic ops
+  detinfer verify <model>           -- Verify determinism (auto-prompt)
+  detinfer compare <model>          -- Before/after detinfer comparison
+  detinfer export <model>           -- Export inference proof to JSON
+  detinfer cross-verify <proof.json> -- Verify proof on this machine
+  detinfer info                     -- Show environment info
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ def cmd_export(args: argparse.Namespace) -> None:
     print(f"\n{proof}")
     print(f"\nProof saved to: {args.output}")
     print(f"\nCopy this file to another machine and run:")
-    print(f"  determl cross-verify {args.output}")
+    print(f"  detinfer cross-verify {args.output}")
 
 
 def cmd_cross_verify(args: argparse.Namespace) -> None:
@@ -128,7 +128,7 @@ def cmd_cross_verify(args: argparse.Namespace) -> None:
 
 
 def cmd_compare(args: argparse.Namespace) -> None:
-    """Compare model output with and without determl enforcement."""
+    """Compare model output with and without detinfer enforcement."""
     import random
     import numpy as np
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -144,9 +144,9 @@ def cmd_compare(args: argparse.Namespace) -> None:
     print(f"Device: {device}")
     print(f"Runs:   {num_runs}")
 
-    # ── Phase 1: WITHOUT determl ──
+    # ── Phase 1: WITHOUT detinfer ──
     print("\n" + "=" * 60)
-    print("  WITHOUT determl (raw PyTorch, no enforcement)")
+    print("  WITHOUT detinfer (raw PyTorch, no enforcement)")
     print("=" * 60)
 
     print("Loading model (raw)...")
@@ -190,9 +190,9 @@ def cmd_compare(args: argparse.Namespace) -> None:
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    # ── Phase 2: WITH determl ──
+    # ── Phase 2: WITH detinfer ──
     print("\n" + "=" * 60)
-    print("  WITH determl (enforcement ON)")
+    print("  WITH detinfer (enforcement ON)")
     print("=" * 60)
 
     from detinfer.engine import DeterministicEngine
@@ -223,10 +223,10 @@ def cmd_compare(args: argparse.Namespace) -> None:
     print("\n" + "=" * 60)
     print("  COMPARISON SUMMARY")
     print("=" * 60)
-    print(f"  Without determl: {unique_raw} unique hash(es) across {num_runs} runs")
-    print(f"  With determl:    {unique_determl} unique hash(es) across {num_runs} runs")
+    print(f"  Without detinfer: {unique_raw} unique hash(es) across {num_runs} runs")
+    print(f"  With detinfer:    {unique_determl} unique hash(es) across {num_runs} runs")
     if unique_determl == 1:
-        print(f"\n  ✓ determl canonical hash: {determl_hashes[0]}")
+        print(f"\n  ✓ detinfer canonical hash: {determl_hashes[0]}")
         print(f"  ✓ Seed: {args.seed}")
         print(f"  ✓ This hash will be identical on any machine with the same model.")
     print()
@@ -268,16 +268,16 @@ def main() -> None:
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # -- determl info --
+    # -- detinfer info --
     subparsers.add_parser("info", help="Show environment information")
 
-    # -- determl scan <model> --
+    # -- detinfer scan <model> --
     scan_parser = subparsers.add_parser("scan", help="Scan model for non-deterministic ops")
     scan_parser.add_argument("model", help="HuggingFace model name (e.g., Qwen/Qwen2.5-Coder-0.5B-Instruct)")
     scan_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     scan_parser.add_argument("--device", default=None, help="Device (cpu/cuda, default: auto)")
 
-    # -- determl verify <model> --
+    # -- detinfer verify <model> --
     verify_parser = subparsers.add_parser("verify", help="Verify model determinism")
     verify_parser.add_argument("model", help="HuggingFace model name")
     verify_parser.add_argument("--prompt", default=None, help="Test prompt (default: auto)")
@@ -286,8 +286,8 @@ def main() -> None:
     verify_parser.add_argument("--precision", default="high", help="Canonical precision (default: high)")
     verify_parser.add_argument("--device", default=None, help="Device (default: auto)")
 
-    # -- determl compare <model> --
-    compare_parser = subparsers.add_parser("compare", help="Before/after determl comparison")
+    # -- detinfer compare <model> --
+    compare_parser = subparsers.add_parser("compare", help="Before/after detinfer comparison")
     compare_parser.add_argument("model", help="HuggingFace model name")
     compare_parser.add_argument("--prompt", default=None, help="Test prompt (default: auto)")
     compare_parser.add_argument("--runs", type=int, default=5, help="Number of runs (default: 5)")
@@ -295,7 +295,7 @@ def main() -> None:
     compare_parser.add_argument("--precision", default="high", help="Canonical precision (default: high)")
     compare_parser.add_argument("--device", default=None, help="Device (default: auto)")
 
-    # -- determl benchmark <model> --
+    # -- detinfer benchmark <model> --
     bench_parser = subparsers.add_parser("benchmark", help="Auto-scaling determinism benchmark")
     bench_parser.add_argument("model", help="HuggingFace model name")
     bench_parser.add_argument("--depth", default="auto", choices=["auto", "light", "standard", "deep"], help="Benchmark depth (default: auto)")
@@ -304,7 +304,7 @@ def main() -> None:
     bench_parser.add_argument("--device", default=None, help="Device (default: auto)")
     bench_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per prompt (default: 256)")
 
-    # -- determl export <model> --
+    # -- detinfer export <model> --
     export_parser = subparsers.add_parser("export", help="Export inference proof to JSON")
     export_parser.add_argument("model", help="HuggingFace model name")
     export_parser.add_argument("--output", "-o", default="proof.json", help="Output file (default: proof.json)")
@@ -314,11 +314,11 @@ def main() -> None:
     export_parser.add_argument("--device", default=None, help="Device (default: auto)")
     export_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens (default: 256)")
 
-    # -- determl cross-verify <proof.json> --
+    # -- detinfer cross-verify <proof.json> --
     xverify_parser = subparsers.add_parser("cross-verify", help="Verify proof on this machine")
     xverify_parser.add_argument("proof_file", help="Path to proof JSON file")
 
-    # -- determl run <model> --
+    # -- detinfer run <model> --
     run_parser = subparsers.add_parser("run", help="Interactive deterministic inference")
     run_parser.add_argument("model", help="HuggingFace model name")
     run_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
@@ -348,3 +348,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

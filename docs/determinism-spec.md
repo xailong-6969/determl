@@ -1,19 +1,19 @@
-# determl Determinism Specification
+# detinfer Determinism Specification
 
-This document defines exactly what "deterministic" means in determl,
+This document defines exactly what "deterministic" means in detinfer,
 what is hashed and why, what assumptions are required, and what is excluded.
 
 ---
 
 ## 1. Definition of Determinism
 
-In determl, **deterministic** means:
+In detinfer, **deterministic** means:
 
 > Given the same model weights, tokenizer, prompt bytes, seed, dtype, generation
 > config, and supported backend — the output token sequence is **bitwise identical**
 > across runs on the **same hardware**.
 
-With canonicalization enabled, determl additionally guarantees:
+With canonicalization enabled, detinfer additionally guarantees:
 
 > The **canonical hash** is identical across **different hardware** (e.g. A100 vs RTX 4090)
 > when all supported configuration requirements are met.
@@ -24,7 +24,7 @@ With canonicalization enabled, determl additionally guarantees:
   proof of execution. Another party can re-run the same inference to check, but cannot
   verify without running the model themselves.
 - **Not** semantic stability — two outputs may be byte-different but semantically equivalent.
-  determl enforces byte/token determinism, not fuzzy similarity.
+  detinfer enforces byte/token determinism, not fuzzy similarity.
 - **Not** guaranteed across unsupported backends — see the Supported Matrix below.
 
 ---
@@ -47,13 +47,13 @@ Decoded text can differ even when token IDs are identical, due to:
 - Unicode normalization in the tokenizer decoder
 - Whitespace handling across transformers versions
 
-determl hashes **token IDs** (integers) which are hardware-independent and unambiguous.
+detinfer hashes **token IDs** (integers) which are hardware-independent and unambiguous.
 
 ---
 
 ## 3. Required Assumptions
 
-For determl's determinism guarantee to hold, ALL of the following must be true:
+For detinfer's determinism guarantee to hold, ALL of the following must be true:
 
 | Assumption | Why it matters |
 |---|---|
@@ -106,7 +106,7 @@ For determl's determinism guarantee to hold, ALL of the following must be true:
 
 ## 5. Proof Format
 
-The `proof.json` exported by `determl export` contains the following fields:
+The `proof.json` exported by `detinfer export` contains the following fields:
 
 ```json
 {
@@ -153,22 +153,22 @@ The `canonical_hash` proves that:
 
 ## 6. Operating Modes
 
-determl provides three effective operating modes depending on your use case:
+detinfer provides three effective operating modes depending on your use case:
 
-### Strict Mode (default for `determl verify` / `determl export`)
+### Strict Mode (default for `detinfer verify` / `detinfer export`)
 - All seeds locked
 - Flash Attention replaced with MATH backend
 - Greedy decoding enforced
 - Full token-level hashing
 - Use when: cross-hardware verification, audit trails, decentralized AI
 
-### Compatible Mode (default for `determl run`)
+### Compatible Mode (default for `detinfer run`)
 - Seeds locked
 - Greedy decoding enforced
 - Chat template auto-applied
 - Use when: interactive inference, development
 
-### Audit Mode (`determl cross-verify`)
+### Audit Mode (`detinfer cross-verify`)
 - Does not force settings — loads proof and re-runs with proof's configuration
 - Detects and reports mismatch sources (tokenizer drift, dtype mismatch, quantization)
 - Use when: diagnosing why two machines disagree
@@ -177,7 +177,7 @@ determl provides three effective operating modes depending on your use case:
 
 ## 7. Mismatch Diagnosis
 
-When `determl cross-verify` reports a mismatch, it checks these fields in order:
+When `detinfer cross-verify` reports a mismatch, it checks these fields in order:
 
 1. **Input tokens mismatch** → tokenizer or chat template differs between machines
 2. **Quantization mismatch** → proof used quantized model, local run did not (or vice versa)
@@ -197,3 +197,4 @@ When `determl cross-verify` reports a mismatch, it checks these fields in order:
 | **Token hash** | Hash of integer token ID sequence; the strongest form of output identity |
 | **Proof** | A JSON record containing hashes and environment metadata for replay verification |
 | **Cross-GPU verification** | Re-running the same inference on different hardware and comparing canonical hashes |
+

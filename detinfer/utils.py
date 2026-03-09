@@ -1,5 +1,5 @@
 """
-determl.utils — Hashing & Environment Utilities
+detinfer.utils — Hashing & Environment Utilities
 
 Provides cryptographic hashing for tensors and strings, plus
 a function to snapshot the full compute environment for reproducibility.
@@ -93,3 +93,4 @@ def get_environment_snapshot() -> dict[str, Any]:
         ]
 
     return snapshot
+

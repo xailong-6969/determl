@@ -1,5 +1,5 @@
 """
-determl -- Deterministic ML Library
+detinfer -- Deterministic ML Library
 
 Detect, prevent, and ENFORCE determinism in ML inference and training.
 
@@ -7,7 +7,7 @@ v2: Real enforcement, not just convenience wrappers.
 
 Quick start:
     import detinfer
-    determl.enforce()  # One line. Everything is now deterministic.
+    detinfer.enforce()  # One line. Everything is now deterministic.
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ def enforce(seed: int = 42, warn_only: bool = True) -> DeterministicConfig:
 
     Usage:
         import detinfer
-        determl.enforce(seed=42)
+        detinfer.enforce(seed=42)
 
         # Now ANY PyTorch code is deterministic:
         output = model(input)           # inference
@@ -84,7 +84,7 @@ def status() -> dict:
         Dict with enforcement state, seed, and flag values
     """
     if _config is None or not _enforced:
-        return {"enforced": False, "message": "Call determl.enforce() first"}
+        return {"enforced": False, "message": "Call detinfer.enforce() first"}
     snapshot = _config.snapshot()
     snapshot["enforced"] = True
     return snapshot
@@ -97,14 +97,14 @@ def checkpoint_hash(model: torch.nn.Module) -> str:
     produce identical weights at the same training step.
 
     Usage:
-        determl.enforce(seed=42)
+        detinfer.enforce(seed=42)
         for step, batch in enumerate(dataloader):
             loss = model(batch).loss
             loss.backward()
             optimizer.step()
 
             # Verify weights match across machines:
-            h = determl.checkpoint_hash(model)
+            h = detinfer.checkpoint_hash(model)
             print(f"Step {step}: {h}")
 
     Args:
@@ -141,4 +141,5 @@ __all__ = [
     "hash_string",
     "get_environment_snapshot",
 ]
+
 

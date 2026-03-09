@@ -1,4 +1,4 @@
-"""Tests for determl.guardian -- EnvironmentGuardian."""
+"""Tests for detinfer.guardian -- EnvironmentGuardian."""
 
 import pytest
 import torch
@@ -140,3 +140,4 @@ class TestEnvironmentGuardian:
         result = guardian.compare(fp, fp)
         s = str(result)
         assert "STRICT" in s
+

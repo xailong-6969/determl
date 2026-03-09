@@ -1,5 +1,5 @@
 """
-determl.guardian -- Environment Enforcement
+detinfer.guardian -- Environment Enforcement
 
 Instead of just capturing a snapshot (what v1 does), the guardian
 ENFORCES that environments match before comparing results.
@@ -302,3 +302,4 @@ class EnvironmentGuardian:
 class EnvironmentMismatchError(Exception):
     """Raised when environments are too different for reliable comparison."""
     pass
+

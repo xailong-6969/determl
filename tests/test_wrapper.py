@@ -1,4 +1,4 @@
-"""Tests for determl.wrapper — DeterministicLLM.
+"""Tests for detinfer.wrapper — DeterministicLLM.
 
 Uses a tiny randomly-initialized causal LM model (no downloads).
 Requires the 'transformers' package.
@@ -160,3 +160,4 @@ class TestDeterministicLLM:
 
         with pytest.raises(ValueError, match="Either model_name"):
             DeterministicLLM(seed=42)
+

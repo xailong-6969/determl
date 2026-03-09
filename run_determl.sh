@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# run_determl.sh -- Standalone setup & run script for determl
+# run_detinfer.sh -- Standalone setup & run script for detinfer
 #
 # Inspired by https://github.com/gensyn-ai/rl-swarm run_rl_swarm.sh. One script that:
 #   1. Creates a Python virtual environment
@@ -38,7 +38,7 @@ echo -e "${RESET}"
 
 # -- Cleanup handler --
 cleanup() {
-    echo_green ">> Shutting down determl..."
+    echo_green ">> Shutting down detinfer..."
     kill -- -$$ 2>/dev/null || true
     exit 0
 }
@@ -58,9 +58,9 @@ echo_green ">> Activating virtual environment..."
 source "$VENV_DIR/bin/activate"
 
 # ============================================================================
-# Step 2: Install determl
+# Step 2: Install detinfer
 # ============================================================================
-echo_green ">> Installing determl..."
+echo_green ">> Installing detinfer..."
 pip install --upgrade pip
 pip install -e "$ROOT[transformers,dev]"
 
@@ -123,7 +123,7 @@ while true; do
     echo "   6) export       - Export inference proof (for cross-GPU verify)"
     echo "   7) cross-verify - Verify a proof from another machine"
     echo "   8) info         - Show environment information"
-    echo "   9) exit         - Exit determl"
+    echo "   9) exit         - Exit detinfer"
     echo ""
     echo -en "${GREEN}>> Choose [1-9] (default: 1): ${RESET}"
     read -p "" MODE_CHOICE
@@ -170,3 +170,4 @@ while true; do
             ;;
     esac
 done
+

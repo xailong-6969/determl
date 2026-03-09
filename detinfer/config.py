@@ -1,5 +1,5 @@
 """
-determl.config — Deterministic Configuration
+detinfer.config — Deterministic Configuration
 
 Locks down ALL sources of randomness in one call: PyTorch, NumPy,
 Python's random module, CUDA seeds, cuDNN flags, and cuBLAS workspace.
@@ -107,3 +107,4 @@ class DeterministicConfig:
     def __repr__(self) -> str:
         status = "APPLIED" if self._applied else "NOT APPLIED"
         return f"DeterministicConfig(seed={self.seed}, status={status})"
+
