@@ -7,7 +7,7 @@ name = "detinfer"
 version = "0.2.0"
 description = "detinfer (Deterministic Inference) — enforce, verify and prove determinism in ML inference across hardware"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 keywords = ["machine-learning", "determinism", "reproducibility", "pytorch", "llm", "inference", "verification"]
 
