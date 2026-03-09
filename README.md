@@ -4,7 +4,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-88%20passed-brightgreen.svg)]()
+[![PyPI](https://img.shields.io/badge/pypi-v0.3.0-blue.svg)](https://pypi.org/project/detinfer/)
 
 ---
 
@@ -43,11 +44,23 @@ Then use the CLI directly:
 ```bash
 # Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct, etc.
 
+# Inference
 detinfer run <model>            # Interactive inference — type prompts, get deterministic output
 detinfer verify <model>         # Verify determinism — runs 5 times, compares hashes
 detinfer benchmark <model>      # Full stress test with 36 prompts across 8 categories
 detinfer compare <model>        # Side-by-side: without detinfer vs with detinfer
+
+# Agent (NEW in v0.3.0)
+detinfer chat <model>           # Multi-turn deterministic chat agent
+detinfer chat <model> --prompt "What is 2+2?"  # Non-interactive (for CI/scripts)
+detinfer replay session.json    # Replay and verify a saved session
+detinfer diff run_a.json run_b.json  # Token-level comparison of two runs
+
+# Proofs
 detinfer export <model> -o proof.json   # Export proof for cross-GPU verification
+detinfer cross-verify proof.json        # Verify a proof from another machine
+
+# Info
 detinfer info                   # Show your GPU and environment details
 ```
 
@@ -160,7 +173,27 @@ engine.load("<model>", device_map="auto")
 result = engine.run("Write hello world in Python")
 ```
 
-### 3. Verify Determinism
+### 3. Deterministic Chat Agent (NEW in v0.3.0)
+
+```python
+from detinfer import DeterministicAgent
+
+# Multi-turn deterministic chat
+agent = DeterministicAgent("gpt2", seed=42)
+response = agent.chat("What is 2+2?")
+print(response)  # Always the same answer
+
+response = agent.chat("Explain more")
+print(response)  # Always the same follow-up
+
+# Export full session trace (token-by-token proof)
+agent.export_session("session.json")
+
+# Replay on another machine to verify
+# detinfer replay session.json
+```
+
+### 4. Verify Determinism
 
 ```python
 # Run 5 times automatically, compare all hashes
@@ -170,7 +203,7 @@ print(result)
 # SHA-256: 799519fee8d50aca...
 ```
 
-### 4. Training Verification
+### 5. Training Verification
 
 ```python
 import detinfer
@@ -187,7 +220,7 @@ for step, batch in enumerate(dataloader):
     print(f"Step {step}: {h}")
 ```
 
-### 5. Cross-GPU Proof Verification
+### 6. Cross-GPU Proof Verification
 
 Prove that two different GPUs produce the same output — see the [Cross-GPU Verification Guide](#cross-gpu-verification-guide) below for the full step-by-step walkthrough.
 
@@ -206,6 +239,19 @@ detinfer includes a full command-line interface:
 
 # Interactive deterministic inference
 detinfer run <model>
+
+# Deterministic multi-turn chat agent (NEW in v0.3.0)
+detinfer chat <model>
+detinfer chat <model> --prompt "Hello"  # Non-interactive mode
+detinfer chat <model> --export session.json
+detinfer chat <model> --quantize int8   # Experimental INT8 mode
+
+# Replay and verify a saved chat session
+detinfer replay session.json
+detinfer replay session.json --strict   # Step-by-step verification
+
+# Token-level comparison of two sessions
+detinfer diff run_a.json run_b.json
 
 # Scan model for non-deterministic ops (Dropout, Flash Attention, etc.)
 detinfer scan <model>
@@ -379,18 +425,25 @@ detinfer addresses 7 sources of non-determinism:
 ```
 detinfer/
   __init__.py       # Top-level API: enforce(), status(), checkpoint_hash()
-  config.py         # Seed locking + deterministic flags
-  enforcer.py       # Runtime op patching (Dropout, Flash Attention)
-  canonicalizer.py  # Cross-hardware output normalization
-  guardian.py       # Environment fingerprinting + compatibility
-  engine.py         # High-level DeterministicEngine for LLMs
-  benchmark.py      # Auto-scaling benchmark suite (8 tiers, 36 prompts)
-  proof.py          # Cross-GPU proof export/import/verify
-  detector.py       # Static model scanning
-  verifier.py       # Hash-based verification
-  wrapper.py        # Simple HuggingFace wrapper
-  cli.py            # CLI entry point (9 commands)
-  utils.py          # Hashing + env snapshots
+  cli.py            # CLI entry point (12 commands)
+
+  inference/        # Deterministic inference library
+    config.py       # Seed locking + deterministic flags
+    enforcer.py     # Runtime op patching (Dropout, Flash Attention)
+    canonicalizer.py # Cross-hardware output normalization
+    guardian.py     # Environment fingerprinting + compatibility
+    engine.py       # High-level DeterministicEngine for LLMs
+    benchmark.py    # Auto-scaling benchmark suite (8 tiers, 36 prompts)
+    proof.py        # Cross-GPU proof export/import/verify
+    detector.py     # Static model scanning
+    verifier.py     # Hash-based verification
+    wrapper.py      # Simple HuggingFace wrapper
+    utils.py        # Hashing + env snapshots
+
+  agent/            # Deterministic agent system (NEW in v0.3.0)
+    runtime.py      # DeterministicAgent — multi-turn chat
+    trace.py        # Token-level trace recording + session schema
+    replay.py       # Session replay verification + diff
 ```
 
 ---
@@ -433,6 +486,22 @@ detinfer.checkpoint_hash(model)         # Hash model weights (for training)
 | `run_benchmark(engine, config)` | Run full benchmark suite |
 | `BenchmarkConfig.from_depth(depth, param_b)` | Auto-scale by model size |
 
+### DeterministicAgent (NEW in v0.3.0)
+
+| Method | Description |
+|--------|-------------|
+| `DeterministicAgent(model, seed)` | Create agent |
+| `.chat(message)` | Send message, get deterministic response |
+| `.export_session(path)` | Export full token trace to JSON |
+| `.get_session_hash()` | Get canonical session hash |
+
+### Replay & Diff
+
+| Function | Description |
+|----------|-------------|
+| `replay_session(trace_path)` | Re-run session, verify token-by-token |
+| `diff_sessions(path_a, path_b)` | Compare two traces, find first mismatch |
+
 ---
 
 ## Running Tests
@@ -457,7 +526,8 @@ pytest tests/ -v
 | bf16 inference | Partial | Hardware-dependent rounding; canonical hash may differ across GPU generations |
 | Multi-GPU (`device_map="auto"`) | Partial | Inference works; very large models may have split-order edge cases |
 | Flash Attention | Partial | Auto-replaced with MATH backend; may reduce throughput |
-| Quantized models (GPTQ/AWQ/bitsandbytes) | **Not supported** | Kernel-specific rounding breaks cross-machine proof |
+| Quantized models (INT8 via bitsandbytes) | **Experimental** | May improve cross-device consistency; not guaranteed bitwise identical |
+| Quantized models (GPTQ/AWQ) | **Not supported** | Kernel-specific rounding breaks cross-machine proof |
 | `torch.compile` | **Not supported** | Graph autotuning selects different kernels across runs |
 | Beam search (`num_beams > 1`) | **Not supported** | Tie-breaking is implementation-specific |
 | Speculative decoding | **Not supported** | Draft model adds nondeterminism |

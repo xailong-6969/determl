@@ -12,7 +12,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from detinfer.trace import SessionTrace
+from detinfer.agent.trace import SessionTrace
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ def replay_session(
     Returns:
         ReplayResult with verification outcome.
     """
-    from detinfer.agent import DeterministicAgent
+    from detinfer.agent.runtime import DeterministicAgent
 
     # Load original trace
     original = SessionTrace.from_json(trace_path)

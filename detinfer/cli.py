@@ -26,7 +26,7 @@ import torch
 
 def cmd_info(args: argparse.Namespace) -> None:
     """Show environment information."""
-    from detinfer.guardian import EnvironmentGuardian
+    from detinfer.inference.guardian import EnvironmentGuardian
 
     guardian = EnvironmentGuardian()
     fingerprint = guardian.create_fingerprint()
@@ -35,7 +35,7 @@ def cmd_info(args: argparse.Namespace) -> None:
 
 def cmd_scan(args: argparse.Namespace) -> None:
     """Scan a model for non-deterministic ops."""
-    from detinfer.engine import DeterministicEngine
+    from detinfer.inference.engine import DeterministicEngine
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -68,8 +68,8 @@ def cmd_verify(args: argparse.Namespace) -> None:
 
 def cmd_benchmark(args: argparse.Namespace) -> None:
     """Run the auto-scaling determinism benchmark."""
-    from detinfer.engine import DeterministicEngine
-    from detinfer.benchmark import BenchmarkConfig, run_benchmark, estimate_param_count
+    from detinfer.inference.engine import DeterministicEngine
+    from detinfer.inference.benchmark import BenchmarkConfig, run_benchmark, estimate_param_count
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -93,8 +93,8 @@ def cmd_benchmark(args: argparse.Namespace) -> None:
 
 def cmd_export(args: argparse.Namespace) -> None:
     """Export an inference proof to a JSON file."""
-    from detinfer.engine import DeterministicEngine
-    from detinfer.proof import create_proof
+    from detinfer.inference.engine import DeterministicEngine
+    from detinfer.inference.proof import create_proof
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -118,7 +118,7 @@ def cmd_export(args: argparse.Namespace) -> None:
 
 def cmd_cross_verify(args: argparse.Namespace) -> None:
     """Verify an inference proof on this machine."""
-    from detinfer.proof import InferenceProof, cross_verify
+    from detinfer.inference.proof import InferenceProof, cross_verify
 
     print(f"Loading proof from: {args.proof_file}")
     proof = InferenceProof.load(args.proof_file)
@@ -198,7 +198,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
     print("  WITH detinfer (enforcement ON)")
     print("=" * 60)
 
-    from detinfer.engine import DeterministicEngine
+    from detinfer.inference.engine import DeterministicEngine
 
     engine = DeterministicEngine(
         seed=args.seed,
@@ -237,7 +237,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
 
 def cmd_run(args: argparse.Namespace) -> None:
     """Interactive deterministic inference."""
-    from detinfer.engine import DeterministicEngine
+    from detinfer.inference.engine import DeterministicEngine
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -266,7 +266,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
 def cmd_chat(args: argparse.Namespace) -> None:
     """Deterministic multi-turn chat agent."""
-    from detinfer.agent import DeterministicAgent
+    from detinfer.agent.runtime import DeterministicAgent
 
     print(f"Loading model: {args.model}...")
     agent = DeterministicAgent(
@@ -316,7 +316,7 @@ def cmd_chat(args: argparse.Namespace) -> None:
 
 def cmd_replay(args: argparse.Namespace) -> None:
     """Replay and verify a saved session."""
-    from detinfer.replay import replay_session
+    from detinfer.agent.replay import replay_session
 
     print(f"Loading session: {args.session_file}")
     print(f"Strict mode: {'ON' if args.strict else 'OFF'}")
@@ -332,7 +332,7 @@ def cmd_replay(args: argparse.Namespace) -> None:
 
 def cmd_diff(args: argparse.Namespace) -> None:
     """Token-level comparison of two session traces."""
-    from detinfer.replay import diff_sessions
+    from detinfer.agent.replay import diff_sessions
 
     print(f"Comparing:")
     print(f"  A: {args.file_a}")

@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from detinfer.guardian import (
+from detinfer.inference.guardian import (
     EnvironmentGuardian,
     EnvironmentFingerprint,
     CompatibilityLevel,

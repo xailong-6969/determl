@@ -3,11 +3,15 @@ detinfer -- Deterministic ML Library
 
 Detect, prevent, and ENFORCE determinism in ML inference and training.
 
-v2: Real enforcement, not just convenience wrappers.
+v3: Deterministic agent with token tracing, replay, and diff.
 
 Quick start:
     import detinfer
     detinfer.enforce()  # One line. Everything is now deterministic.
+
+Structure:
+    detinfer.inference  -- Core deterministic inference library
+    detinfer.agent      -- Deterministic chat agent with tracing
 """
 
 from __future__ import annotations
@@ -17,25 +21,25 @@ from typing import Optional
 
 import torch
 
-# Core (always available)
-from detinfer.config import DeterministicConfig
-from detinfer.detector import NonDeterminismDetector
-from detinfer.verifier import InferenceVerifier
-from detinfer.enforcer import DeterministicEnforcer
-from detinfer.canonicalizer import OutputCanonicalizer
-from detinfer.guardian import EnvironmentGuardian
-from detinfer.engine import DeterministicEngine
-from detinfer.utils import hash_tensor, hash_string, get_environment_snapshot
+# Core inference classes (re-exported from inference subpackage)
+from detinfer.inference.config import DeterministicConfig
+from detinfer.inference.detector import NonDeterminismDetector
+from detinfer.inference.verifier import InferenceVerifier
+from detinfer.inference.enforcer import DeterministicEnforcer
+from detinfer.inference.canonicalizer import OutputCanonicalizer
+from detinfer.inference.guardian import EnvironmentGuardian
+from detinfer.inference.engine import DeterministicEngine
+from detinfer.inference.utils import hash_tensor, hash_string, get_environment_snapshot
 
 # Wrapper requires transformers -- import lazily to avoid hard dependency
 try:
-    from detinfer.wrapper import DeterministicLLM
+    from detinfer.inference.wrapper import DeterministicLLM
 except ImportError:
     DeterministicLLM = None
 
 # Agent requires transformers -- import lazily
 try:
-    from detinfer.agent import DeterministicAgent
+    from detinfer.agent.runtime import DeterministicAgent
 except ImportError:
     DeterministicAgent = None
 
@@ -149,5 +153,3 @@ __all__ = [
     "hash_string",
     "get_environment_snapshot",
 ]
-
-

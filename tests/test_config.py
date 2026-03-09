@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import pytest
 
-from detinfer.config import DeterministicConfig
+from detinfer.inference.config import DeterministicConfig
 
 
 class TestDeterministicConfig:

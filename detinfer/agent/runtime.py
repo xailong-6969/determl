@@ -22,8 +22,8 @@ from typing import Any
 
 import torch
 
-from detinfer.engine import DeterministicEngine
-from detinfer.trace import (
+from detinfer.inference.engine import DeterministicEngine
+from detinfer.agent.trace import (
     GenerationTrace,
     SessionTrace,
     build_environment,

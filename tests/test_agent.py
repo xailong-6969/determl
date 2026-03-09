@@ -11,7 +11,7 @@ import tempfile
 
 import pytest
 
-from detinfer.trace import (
+from detinfer.agent.trace import (
     GenerationStep,
     GenerationTrace,
     SessionTrace,
@@ -211,7 +211,7 @@ class TestDiff:
         return path
 
     def test_identical_sessions(self):
-        from detinfer.replay import diff_sessions
+        from detinfer.agent.replay import diff_sessions
         p1 = self._make_session([10, 20, 30])
         p2 = self._make_session([10, 20, 30])
         try:
@@ -222,7 +222,7 @@ class TestDiff:
             os.unlink(p2)
 
     def test_different_sessions(self):
-        from detinfer.replay import diff_sessions
+        from detinfer.agent.replay import diff_sessions
         p1 = self._make_session([10, 20, 30])
         p2 = self._make_session([10, 20, 99])
         try:

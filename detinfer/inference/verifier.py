@@ -14,8 +14,8 @@ from typing import Any, Callable
 import torch
 import torch.nn as nn
 
-from detinfer.config import DeterministicConfig
-from detinfer.utils import hash_tensor, get_environment_snapshot
+from detinfer.inference.config import DeterministicConfig
+from detinfer.inference.utils import hash_tensor, get_environment_snapshot
 
 
 @dataclass

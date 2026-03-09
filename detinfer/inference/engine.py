@@ -40,12 +40,12 @@ import logging
 logging.getLogger("transformers.generation.utils").setLevel(logging.ERROR)
 logging.getLogger("transformers.generation.configuration_utils").setLevel(logging.ERROR)
 
-from detinfer.config import DeterministicConfig
-from detinfer.enforcer import DeterministicEnforcer, EnforcementReport
-from detinfer.canonicalizer import OutputCanonicalizer, Precision
-from detinfer.guardian import EnvironmentGuardian, EnvironmentFingerprint
-from detinfer.utils import hash_string, hash_tensor, get_environment_snapshot
-from detinfer.verifier import InferenceVerifier, VerificationResult
+from detinfer.inference.config import DeterministicConfig
+from detinfer.inference.enforcer import DeterministicEnforcer, EnforcementReport
+from detinfer.inference.canonicalizer import OutputCanonicalizer, Precision
+from detinfer.inference.guardian import EnvironmentGuardian, EnvironmentFingerprint
+from detinfer.inference.utils import hash_string, hash_tensor, get_environment_snapshot
+from detinfer.inference.verifier import InferenceVerifier, VerificationResult
 
 
 @dataclass

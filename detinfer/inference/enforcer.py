@@ -19,7 +19,7 @@ from typing import Any, Generator
 import torch
 import torch.nn as nn
 
-from detinfer.config import DeterministicConfig
+from detinfer.inference.config import DeterministicConfig
 
 
 class FixAction(str, Enum):

@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import pytest
 
-from detinfer.verifier import InferenceVerifier
+from detinfer.inference.verifier import InferenceVerifier
 
 
 class TinyModel(nn.Module):

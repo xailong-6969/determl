@@ -19,9 +19,9 @@ except ImportError as e:
         "Install it with: pip install detinfer[transformers]"
     ) from e
 
-from detinfer.config import DeterministicConfig
-from detinfer.utils import hash_string, get_environment_snapshot
-from detinfer.verifier import InferenceVerifier
+from detinfer.inference.config import DeterministicConfig
+from detinfer.inference.utils import hash_string, get_environment_snapshot
+from detinfer.inference.verifier import InferenceVerifier
 
 
 class DeterministicLLM:

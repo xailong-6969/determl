@@ -266,7 +266,7 @@ def cross_verify(proof: InferenceProof) -> CrossVerifyResult:
         CrossVerifyResult with comparison details
     """
     import torch
-    from detinfer.engine import DeterministicEngine
+    from detinfer.inference.engine import DeterministicEngine
 
     start = time.time()
 
