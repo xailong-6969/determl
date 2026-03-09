@@ -25,12 +25,29 @@ detinfer.enforce()  # Everything is now deterministic.
 
 ## Installation
 
-### Quick Start (recommended)
+### Via PyPI (easiest)
+
+```bash
+# With HuggingFace model support (recommended)
+pip install "detinfer[transformers]"
+
+# Core only (if you already have your own model)
+pip install detinfer
+```
+
+Then use the CLI directly:
+```bash
+detinfer run Qwen/Qwen2.5-0.5B-Instruct
+detinfer verify Qwen/Qwen2.5-0.5B-Instruct
+detinfer export Qwen/Qwen2.5-0.5B-Instruct -o proof.json
+```
+
+### Via Git (for the interactive menu)
 
 ```bash
 git clone https://github.com/xailong-6969/detinfer.git
 cd detinfer
-bash run_determl.sh
+bash run_detinfer.sh
 ```
 
 The script automatically:
@@ -39,7 +56,7 @@ The script automatically:
 3. Detects your GPU/CPU
 4. Launches the interactive menu
 
-### Manual Install
+### Manual Install from Source
 
 ```bash
 # Clone
@@ -53,9 +70,6 @@ source venv/bin/activate   # Linux/Mac
 
 # Recommended — includes HuggingFace model support (load any model by name)
 pip install -e ".[transformers]"
-
-# Minimal — only core enforcement (use if you have your own model, no HuggingFace)
-pip install -e .
 
 # For contributors — includes pytest for running the test suite
 pip install -e ".[dev]"
