@@ -3,6 +3,9 @@ detinfer.cli -- Command-Line Interface
 
 Provides the `detinfer` command with subcommands:
   detinfer run <model>              -- Interactive deterministic inference
+  detinfer chat <model>             -- Deterministic multi-turn chat agent
+  detinfer replay <session.json>    -- Replay and verify a saved session
+  detinfer diff <a.json> <b.json>   -- Token-level comparison of two sessions
   detinfer scan <model>             -- Scan for non-deterministic ops
   detinfer verify <model>           -- Verify determinism (auto-prompt)
   detinfer compare <model>          -- Before/after detinfer comparison
@@ -261,6 +264,85 @@ def cmd_run(args: argparse.Namespace) -> None:
         print("\nGoodbye!")
 
 
+def cmd_chat(args: argparse.Namespace) -> None:
+    """Deterministic multi-turn chat agent."""
+    from detinfer.agent import DeterministicAgent
+
+    print(f"Loading model: {args.model}...")
+    agent = DeterministicAgent(
+        model_name=args.model,
+        seed=args.seed,
+        max_new_tokens=args.max_tokens,
+        trace_mode="topk" if args.verbose_trace else "minimal",
+        quantize=args.quantize,
+        device=args.device,
+    )
+
+    print(f"Model loaded. Seed: {args.seed}")
+    print(f"Deterministic chat ready.\n")
+
+    # Non-interactive mode
+    if args.prompt:
+        response = agent.chat(args.prompt)
+        print(f"User:      {args.prompt}")
+        print(f"Assistant: {response}")
+        print(f"\nSession hash: {agent.get_session_hash()}")
+        if args.export:
+            session_hash = agent.export_session(args.export)
+            print(f"Session exported to: {args.export}")
+        return
+
+    # Interactive mode
+    print("Type your messages (Ctrl+C to exit):\n")
+    try:
+        while True:
+            user_input = input("You: ").strip()
+            if not user_input:
+                continue
+
+            response = agent.chat(user_input)
+            print(f"Assistant: {response}\n")
+
+    except (KeyboardInterrupt, EOFError):
+        print(f"\n\nSession: {agent.turn_count} turns")
+        print(f"Session hash: {agent.get_session_hash()}")
+
+        if args.export:
+            session_hash = agent.export_session(args.export)
+            print(f"Session exported to: {args.export}")
+
+        print("Goodbye!")
+
+
+def cmd_replay(args: argparse.Namespace) -> None:
+    """Replay and verify a saved session."""
+    from detinfer.replay import replay_session
+
+    print(f"Loading session: {args.session_file}")
+    print(f"Strict mode: {'ON' if args.strict else 'OFF'}")
+    print(f"Replaying...\n")
+
+    result = replay_session(
+        trace_path=args.session_file,
+        model_name=args.model,
+        strict=args.strict,
+    )
+    print(result)
+
+
+def cmd_diff(args: argparse.Namespace) -> None:
+    """Token-level comparison of two session traces."""
+    from detinfer.replay import diff_sessions
+
+    print(f"Comparing:")
+    print(f"  A: {args.file_a}")
+    print(f"  B: {args.file_b}")
+    print()
+
+    result = diff_sessions(args.file_a, args.file_b)
+    print(result)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="detinfer",
@@ -326,6 +408,28 @@ def main() -> None:
     run_parser.add_argument("--device", default=None, help="Device (default: auto)")
     run_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens (default: 256)")
 
+    # -- detinfer chat <model> --
+    chat_parser = subparsers.add_parser("chat", help="Deterministic multi-turn chat agent")
+    chat_parser.add_argument("model", help="HuggingFace model name")
+    chat_parser.add_argument("--prompt", default=None, help="Non-interactive: single prompt (for CI/scripts)")
+    chat_parser.add_argument("--export", default=None, help="Export session trace to JSON file")
+    chat_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    chat_parser.add_argument("--device", default=None, help="Device (default: auto)")
+    chat_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per turn (default: 256)")
+    chat_parser.add_argument("--quantize", default=None, choices=["int8"], help="Quantization mode (experimental)")
+    chat_parser.add_argument("--verbose-trace", action="store_true", help="Record top-k tokens per step")
+
+    # -- detinfer replay <session.json> --
+    replay_parser = subparsers.add_parser("replay", help="Replay and verify a saved session")
+    replay_parser.add_argument("session_file", help="Path to session JSON file")
+    replay_parser.add_argument("--model", default=None, help="Override model (uses trace model if not set)")
+    replay_parser.add_argument("--strict", action="store_true", help="Verify every generation step")
+
+    # -- detinfer diff <a.json> <b.json> --
+    diff_parser = subparsers.add_parser("diff", help="Token-level comparison of two sessions")
+    diff_parser.add_argument("file_a", help="First session JSON")
+    diff_parser.add_argument("file_b", help="Second session JSON")
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -341,6 +445,9 @@ def main() -> None:
         "export": cmd_export,
         "cross-verify": cmd_cross_verify,
         "run": cmd_run,
+        "chat": cmd_chat,
+        "replay": cmd_replay,
+        "diff": cmd_diff,
     }
 
     handlers[args.command](args)

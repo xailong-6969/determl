@@ -33,7 +33,13 @@ try:
 except ImportError:
     DeterministicLLM = None
 
-__version__ = "0.2.0"
+# Agent requires transformers -- import lazily
+try:
+    from detinfer.agent import DeterministicAgent
+except ImportError:
+    DeterministicAgent = None
+
+__version__ = "0.3.0"
 
 # ---------------------------------------------------------------------------
 # Module-level state for the enforce() API
@@ -126,6 +132,8 @@ __all__ = [
     "enforce",
     "status",
     "checkpoint_hash",
+    # v3 agent
+    "DeterministicAgent",
     # v2 classes
     "DeterministicEngine",
     "DeterministicEnforcer",

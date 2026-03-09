@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "detinfer"
-version = "0.2.1"
+version = "0.3.0"
 description = "detinfer (Deterministic Inference) — enforce, verify and prove determinism in ML inference across hardware"
 readme = "README.md"
 license = "MIT"
@@ -24,6 +24,7 @@ Documentation = "https://github.com/xailong-6969/detinfer/blob/main/docs/determi
 
 [project.optional-dependencies]
 transformers = ["transformers>=4.30.0"]
+quantized = ["transformers>=4.30.0", "bitsandbytes>=0.41.0", "accelerate>=0.20.0"]
 dev = [
     "pytest>=7.0.0",
     "transformers>=4.30.0",

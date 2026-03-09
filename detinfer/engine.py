@@ -171,6 +171,7 @@ class DeterministicEngine:
         model_name: str,
         torch_dtype: torch.dtype | str = "auto",
         device_map: str | dict | None = None,
+        quantize: str | None = None,
     ) -> EnforcementReport:
         """Load a HuggingFace model by name and enforce determinism.
 
@@ -180,6 +181,9 @@ class DeterministicEngine:
             device_map: Device placement strategy for multi-GPU.
                         Use "auto" to split across all available GPUs.
                         Use None for single-device (default).
+            quantize: Quantization mode (experimental). Currently supports "int8".
+                      INT8 may improve cross-device consistency but does not
+                      guarantee bitwise determinism across GPU architectures.
 
         Returns:
             EnforcementReport showing what ops were fixed.
@@ -198,10 +202,23 @@ class DeterministicEngine:
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        # Load model — with or without device_map
+        # Load model — with or without device_map and quantization
         load_kwargs = {"torch_dtype": torch_dtype}
         if device_map is not None:
             load_kwargs["device_map"] = device_map
+
+        # INT8 quantization (experimental)
+        if quantize == "int8":
+            try:
+                import bitsandbytes  # noqa: F401
+            except ImportError as e:
+                raise ImportError(
+                    "The 'bitsandbytes' package is required for INT8 quantization. "
+                    "Install it with: pip install detinfer[quantized]"
+                ) from e
+            load_kwargs["load_in_8bit"] = True
+            load_kwargs["device_map"] = device_map or "auto"
+            self._multi_gpu = True  # INT8 requires device_map
 
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name, **load_kwargs
