@@ -28,6 +28,10 @@ detinfer.enforce()  # Everything is now deterministic.
 ### Via PyPI (easiest)
 
 ```bash
+# Create and activate a virtual environment (required on Debian/Ubuntu)
+python3 -m venv venv
+source venv/bin/activate
+
 # With HuggingFace model support (recommended)
 pip install "detinfer[transformers]"
 
@@ -37,9 +41,14 @@ pip install detinfer
 
 Then use the CLI directly:
 ```bash
-detinfer run Qwen/Qwen2.5-0.5B-Instruct
-detinfer verify Qwen/Qwen2.5-0.5B-Instruct
-detinfer export Qwen/Qwen2.5-0.5B-Instruct -o proof.json
+# Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct, etc.
+
+detinfer run <model>            # Interactive inference — type prompts, get deterministic output
+detinfer verify <model>         # Verify determinism — runs 5 times, compares hashes
+detinfer benchmark <model>      # Full stress test with 36 prompts across 8 categories
+detinfer compare <model>        # Side-by-side: without detinfer vs with detinfer
+detinfer export <model> -o proof.json   # Export proof for cross-GPU verification
+detinfer info                   # Show your GPU and environment details
 ```
 
 ### Via Git (for the interactive menu)
@@ -85,26 +94,13 @@ pip install -e ".[dev]"
 
 ## Getting Started
 
-### If you installed via `run_determl.sh`
+### If you installed via `run_detinfer.sh`
 
 The interactive menu is already open — select an option and follow the prompts. The script handles everything for you.
 
-### If you installed manually via `pip install`
+### If you installed via `pip install`
 
-After installation, you can use detinfer in two ways:
-
-**From the terminal (CLI):**
-
-```bash
-# Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct, etc.
-
-detinfer run <model>            # Interactive inference — type prompts, get deterministic output
-detinfer verify <model>         # Verify determinism — runs 5 times, compares hashes
-detinfer benchmark <model>      # Full stress test with 36 prompts across 8 categories
-detinfer compare <model>        # Side-by-side: without detinfer vs with detinfer
-detinfer export <model> -o proof.json   # Export proof for cross-GPU verification
-detinfer info                   # Show your GPU and environment details
-```
+*(Note: On modern Debian/Ubuntu systems, remember to activate your virtual environment before running the tool, e.g., `source venv/bin/activate`)*
 
 **From Python (in your own code):**
 
