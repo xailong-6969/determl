@@ -78,6 +78,7 @@ class DeterministicAgent:
         trace_mode: str = "minimal",
         quantize: str | None = None,
         device: str | None = None,
+        system_prompt: str | None = None,
     ):
         """Initialize the deterministic agent.
 
@@ -88,12 +89,14 @@ class DeterministicAgent:
             trace_mode: "minimal" (default) or "topk" for verbose trace.
             quantize: Quantization mode (None or "int8", experimental).
             device: Device to use (auto-detected if None).
+            system_prompt: Optional system prompt (e.g., "You are a math tutor").
         """
         self.model_name = model_name
         self.seed = seed
         self.max_new_tokens = max_new_tokens
         self.trace_mode = trace_mode
         self.quantize = quantize
+        self.system_prompt = system_prompt
 
         # Initialize engine
         self.engine = DeterministicEngine(seed=seed, device=device)
@@ -132,6 +135,11 @@ class DeterministicAgent:
 
         self._turn_count = 0
         self._conversation_history: list[dict] = []
+
+        # Add system prompt to conversation history if provided
+        if system_prompt:
+            self._conversation_history.append({"role": "system", "content": system_prompt})
+            self.session.add_message("system", system_prompt)
 
     def chat(self, message: str) -> str:
         """Send a message and get a deterministic response.
@@ -212,6 +220,7 @@ class DeterministicAgent:
         """Render the full conversation into a prompt string.
 
         Uses chat template if available, otherwise raw concatenation.
+        System prompt is included at the start of the conversation.
         """
         tokenizer = self.engine.tokenizer
 
@@ -229,7 +238,10 @@ class DeterministicAgent:
         parts = []
         for msg in self._conversation_history:
             role = msg["role"].capitalize()
-            parts.append(f"{role}: {msg['content']}")
+            if role == "System":
+                parts.append(f"System: {msg['content']}")
+            else:
+                parts.append(f"{role}: {msg['content']}")
         parts.append("Assistant:")
         return "\n".join(parts)
 

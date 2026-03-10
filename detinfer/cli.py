@@ -276,9 +276,12 @@ def cmd_chat(args: argparse.Namespace) -> None:
         trace_mode="topk" if args.verbose_trace else "minimal",
         quantize=args.quantize,
         device=args.device,
+        system_prompt=args.system,
     )
 
     print(f"Model loaded. Seed: {args.seed}")
+    if args.system:
+        print(f"System: {args.system}")
     print(f"Deterministic chat ready.\n")
 
     # Non-interactive mode
@@ -416,6 +419,7 @@ def main() -> None:
     chat_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     chat_parser.add_argument("--device", default=None, help="Device (default: auto)")
     chat_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per turn (default: 256)")
+    chat_parser.add_argument("--system", default=None, help="System prompt (e.g., 'You are a math tutor')")
     chat_parser.add_argument("--quantize", default=None, choices=["int8"], help="Quantization mode (experimental)")
     chat_parser.add_argument("--verbose-trace", action="store_true", help="Record top-k tokens per step")
 
