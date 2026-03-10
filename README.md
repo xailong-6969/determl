@@ -15,11 +15,9 @@ Most reproducibility guides stop at setting RNG seeds. In practice, LLM runs can
 
 detinfer focuses on supported workflows where deterministic settings, token tracing, replay, and diffing can be used together to verify and debug LLM outputs.
 
-```bash
-pip install detinfer
-detinfer agent gpt2 --prompt "What is 2+2?" --export run.json
-detinfer replay run.json
-detinfer diff run_a.json run_b.json
+```python
+import detinfer
+detinfer.enforce()  # Apply deterministic runtime settings
 ```
 
 ---
@@ -41,6 +39,11 @@ detinfer diff run_a.json run_b.json
 ## Installation
 
 ```bash
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate       # Linux/Mac
+# venv\Scripts\activate        # Windows
+
 pip install detinfer
 ```
 
@@ -62,17 +65,6 @@ Update to latest version:
 pip install --upgrade detinfer
 ```
 
-### Setting up a virtual environment
-
-```bash
-# Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate       # Linux/Mac
-# venv\Scripts\activate        # Windows
-
-pip install "detinfer[transformers]"
-```
-
 ### Requirements
 
 - Python 3.10+
@@ -84,59 +76,48 @@ pip install "detinfer[transformers]"
 ```bash
 # Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct
 
-# ── Agent ──
-detinfer agent <model>                               # Multi-turn deterministic agent
-detinfer agent <model> --prompt "What is 2+2?"       # Non-interactive (single question)
-detinfer agent <model> --stream                      # Stream tokens in real-time
-detinfer agent <model> --system "You are a tutor"    # Set system prompt
-detinfer agent <model> --export session.json         # Export session trace
-detinfer agent <model> --quantize int8               # Experimental INT8 mode
-detinfer agent <model> --verbose-trace               # Record top-k tokens per step
+# ══════════════════════════════════════
+# INFERENCE
+# ══════════════════════════════════════
 
-# ── Inference ──
 detinfer run <model>                                # Interactive deterministic inference
 detinfer run <model> --seed 42 --max-tokens 512     # Custom seed and token limit
-
-# ── Verify & Replay ──
 detinfer verify <model>                             # Run 5 times, compare hashes
-detinfer replay session.json                        # Replay a saved session
-detinfer replay session.json --strict               # Step-by-step verification
-detinfer verify-session session.json                # Verify session as execution proof
-detinfer verify-session session.json --strict       # Strict proof verification
-detinfer diff run_a.json run_b.json                 # Token-level comparison of two runs
-
-# ── Analysis ──
+detinfer verify <model> --runs 10                   # Custom number of runs
 detinfer scan <model>                               # Scan for non-deterministic ops
 detinfer compare <model>                            # Before vs after detinfer comparison
-detinfer benchmark <model>                          # Full benchmark (auto-scales)
-
-# ── Cross-GPU Proofs ──
+detinfer benchmark <model>                          # Full benchmark (auto-scales by model size)
 detinfer export <model> -o proof.json               # Export proof for cross-GPU verification
 detinfer cross-verify proof.json                    # Verify proof from another machine
 
-# ── Info ──
+# ══════════════════════════════════════
+# AGENT
+# ══════════════════════════════════════
+
+detinfer agent <model>                              # Multi-turn deterministic agent
+detinfer agent <model> --prompt "What is 2+2?"      # Non-interactive (single question)
+detinfer agent <model> --stream                     # Stream tokens in real-time
+detinfer agent <model> --system "You are a tutor"   # Set system prompt
+detinfer agent <model> --export session.json        # Export session trace
+detinfer agent <model> --quantize int8              # Experimental INT8 mode
+detinfer agent <model> --verbose-trace              # Record top-k tokens per step
+detinfer replay session.json                        # Replay a saved agent session
+detinfer replay session.json --strict               # Step-by-step verification
+detinfer verify-session session.json                # Verify session as execution proof
+detinfer diff run_a.json run_b.json                 # Token-level comparison of two runs
+
+# ══════════════════════════════════════
+# INFO
+# ══════════════════════════════════════
+
 detinfer info                                       # Show GPU and environment details
 ```
 
 ---
 
-## Getting Started
+## Inference
 
-```python
-import detinfer
-
-# Apply deterministic runtime settings
-detinfer.enforce(seed=42)
-
-# Now supported PyTorch inference paths use deterministic settings:
-output = model(input)
-```
-
----
-
-## Usage
-
-### 1. Runtime Enforcement
+### Runtime Enforcement
 
 ```python
 import detinfer
@@ -147,7 +128,7 @@ detinfer.enforce(seed=42)
 
 This locks RNG seeds, disables cuDNN benchmarking, enables `torch.use_deterministic_algorithms`, and sets cuBLAS workspace config.
 
-### 2. DeterministicEngine (for LLM inference)
+### DeterministicEngine
 
 ```python
 from detinfer import DeterministicEngine
@@ -162,11 +143,85 @@ print(result.text)            # The generated text
 print(result.canonical_hash)  # SHA-256 hash for verification
 ```
 
-### 3. Deterministic Agent
+### Verify Determinism
+
+```python
+result = engine.verify(num_runs=5)
+print(result)
+# DETERMINISTIC: All 5 runs produced identical output
+```
+
+```bash
+detinfer verify <model>         # CLI version
+detinfer verify <model> --runs 10
+```
+
+### Benchmark
+
+Tests determinism across 8 categories of prompts (auto-scales based on model size):
+
+```bash
+detinfer benchmark <model>
+```
+
+| Tier | Category | What it tests |
+|------|----------|--------------|
+| 1 | Sanity | Basic questions (baseline check) |
+| 2 | Long output | 200+ token generations |
+| 3 | Uncertain | Creative prompts (low confidence) |
+| 4 | Complex code | Merge sort, LRU cache |
+| 5 | Reasoning | Logic puzzles, step-by-step |
+| 6 | Deep context | Long code + passage analysis |
+| 7 | Adversarial | Designed to break determinism |
+| 8 | Edge cases | Unicode, empty, special characters |
+
+### Scan for Non-Deterministic Ops
+
+```bash
+detinfer scan <model>        # Detects Dropout, Flash Attention, etc.
+```
+
+### Before vs After Comparison
+
+```bash
+detinfer compare <model>     # Runs without detinfer, then with detinfer
+```
+
+### Cross-GPU Verification
+
+```bash
+# Machine A: export proof
+detinfer export <model> -o proof.json
+
+# Transfer proof.json to Machine B
+
+# Machine B: verify
+detinfer cross-verify proof.json
+```
+
+### Training Verification
+
+```python
+import detinfer
+
+detinfer.enforce(seed=42)
+
+for step, batch in enumerate(dataloader):
+    loss = model(batch).loss
+    loss.backward()
+    optimizer.step()
+
+    h = detinfer.checkpoint_hash(model)
+    print(f"Step {step}: {h}")
+```
+
+---
+
+## Agent
+
+### Deterministic Agent
 
 Deterministic agent sessions with replayable execution traces.
-
-`detinfer agent` runs supported generation workflows under deterministic settings, records token-level traces, and exports replayable session files for verification and debugging.
 
 Both `chat()` and `chat_stream()` use manual token-by-token generation with deterministic argmax (smallest-token-ID tie-breaking).
 
@@ -194,7 +249,7 @@ for chunk in agent.chat_stream("Explain gravity"):
 agent.export_session("session.json")
 ```
 
-### 4. Session Export & Trace
+### Session Export & Trace
 
 Exported sessions contain:
 
@@ -222,24 +277,18 @@ Exported sessions contain:
 
 With `--verbose-trace`, each step also includes `top_tokens` and `top_scores` (top-10 candidates).
 
-### 5. Replay & Verification
+### Replay & Verification
 
-`detinfer replay` re-runs a saved session and verifies prompt hashes, input tokens, output tokens, and stop conditions under the current runtime.
+`detinfer replay` re-runs a saved session and verifies prompt hashes, input tokens, output tokens, and stop conditions.
 
 ```bash
 detinfer replay run.json
+detinfer replay run.json --strict
 ```
 
-If a divergence occurs, the first mismatch is reported:
+If a divergence occurs, the first mismatch is reported.
 
-```
-Replay verification: FAILED
-Mismatch at turn 2 step 18
-Expected token: 287
-Observed token: 318
-```
-
-### 6. Session Diffing
+### Session Diffing
 
 `detinfer diff` compares two saved sessions and reports the first divergence point at the token/step level.
 
@@ -247,7 +296,7 @@ Observed token: 318
 detinfer diff run_a.json run_b.json
 ```
 
-### 7. Session Proof Verification
+### Session Proof Verification
 
 ```bash
 detinfer verify-session session.json
@@ -266,25 +315,6 @@ detinfer verify-session session.json
     ✓ This session is a valid deterministic execution proof.
   ══════════════════════════════════════════════════════════════
 ```
-
-### 8. Cross-GPU Verification
-
-```bash
-# Machine A
-detinfer export <model> -o proof.json
-
-# Transfer proof.json to Machine B
-
-# Machine B
-detinfer cross-verify proof.json
-```
-
-### 9. Verify Determinism
-
-```python
-# Run 5 times, compare all hashes
-result = engine.verify(num_runs=5)
-print(result)
 # DETERMINISTIC: All 5 runs produced identical output
 ```
 
