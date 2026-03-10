@@ -1,26 +1,40 @@
-# detinfer — Deterministic ML Library
+# detinfer — Deterministic Inference & Replay Toolkit
 
-**Enforce determinism in ML inference and training. One line of code.**
+**Deterministic runtime controls, session tracing, and replay verification for supported LLM workflows.**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-88%20passed-brightgreen.svg)]()
-[![PyPI](https://img.shields.io/badge/pypi-v0.3.0-blue.svg)](https://pypi.org/project/detinfer/)
+[![PyPI](https://img.shields.io/badge/pypi-v0.2.2-blue.svg)](https://pypi.org/project/detinfer/)
 
 ---
 
 ## Why?
 
-ML models give **different outputs every time you run them** — even with the exact same input. This happens because of GPU non-determinism (Flash Attention, CUDA atomics, cuDNN auto-tuning, floating-point ordering).
+Most reproducibility guides stop at setting RNG seeds. In practice, LLM runs can still drift because of decoding settings, backend behavior, prompt rendering, tokenizer differences, and attention/runtime choices.
 
-This breaks everything that requires **verifiable computation**: decentralized AI networks, reproducible research, CI/CD for ML, audit trails.
+detinfer focuses on supported workflows where deterministic settings, token tracing, replay, and diffing can be used together to verify and debug LLM outputs.
 
-**detinfer fixes this.** One import, one function call.
-
-```python
-import detinfer
-detinfer.enforce()  # Everything is now deterministic.
+```bash
+pip install detinfer
+detinfer agent gpt2 --prompt "What is 2+2?" --export run.json
+detinfer replay run.json
+detinfer diff run_a.json run_b.json
 ```
+
+---
+
+## What detinfer is
+
+- A **deterministic runtime and verification toolkit** for supported LLM inference paths
+- A **replay/debugging tool** for agent sessions and token-level generation traces
+- A **reproducibility aid** for benchmarking, CI, and regression testing
+
+## What detinfer is not
+
+- A guarantee of universal determinism for all PyTorch workloads
+- A guarantee of bitwise-identical outputs across all hardware and library combinations
+- A replacement for careful control of tokenizer, prompt formatting, backend, and environment
 
 ---
 
@@ -48,6 +62,17 @@ Update to latest version:
 pip install --upgrade detinfer
 ```
 
+### Setting up a virtual environment
+
+```bash
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate       # Linux/Mac
+# venv\Scripts\activate        # Windows
+
+pip install "detinfer[transformers]"
+```
+
 ### Requirements
 
 - Python 3.10+
@@ -59,18 +84,18 @@ pip install --upgrade detinfer
 ```bash
 # Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct
 
+# ── Agent ──
+detinfer agent <model>                               # Multi-turn deterministic agent
+detinfer agent <model> --prompt "What is 2+2?"       # Non-interactive (single question)
+detinfer agent <model> --stream                      # Stream tokens in real-time
+detinfer agent <model> --system "You are a tutor"    # Set system prompt
+detinfer agent <model> --export session.json         # Export session trace
+detinfer agent <model> --quantize int8               # Experimental INT8 mode
+detinfer agent <model> --verbose-trace               # Record top-k tokens per step
+
 # ── Inference ──
 detinfer run <model>                                # Interactive deterministic inference
 detinfer run <model> --seed 42 --max-tokens 512     # Custom seed and token limit
-
-# ── Chat Agent ──
-detinfer chat <model>                               # Multi-turn deterministic chat
-detinfer chat <model> --prompt "What is 2+2?"       # Non-interactive (single question)
-detinfer chat <model> --stream                      # Stream tokens in real-time
-detinfer chat <model> --system "You are a tutor"    # Set system prompt
-detinfer chat <model> --export session.json         # Export session trace
-detinfer chat <model> --quantize int8               # Experimental INT8 mode
-detinfer chat <model> --verbose-trace               # Record top-k tokens per step
 
 # ── Verify & Replay ──
 detinfer verify <model>                             # Run 5 times, compare hashes
@@ -93,172 +118,181 @@ detinfer cross-verify proof.json                    # Verify proof from another 
 detinfer info                                       # Show GPU and environment details
 ```
 
+---
+
 ## Getting Started
 
 ```python
 import detinfer
 
-# One line — locks all randomness globally
+# Apply deterministic runtime settings
 detinfer.enforce(seed=42)
 
-# Now any PyTorch code is deterministic:
-output = model(input)           # inference
-loss.backward()                 # training
-optimizer.step()                # weight updates
+# Now supported PyTorch inference paths use deterministic settings:
+output = model(input)
 ```
 
 ---
 
 ## Usage
 
-### 1. One-Line Enforcement (for any ML code)
+### 1. Runtime Enforcement
 
 ```python
 import detinfer
 
-# Lock all sources of randomness globally
+# Apply deterministic runtime settings for supported workflows
 detinfer.enforce(seed=42)
-
-# Now ANY PyTorch code is deterministic:
-output = model(input)        # inference — deterministic
-loss.backward()              # training — deterministic
-optimizer.step()             # weight updates — deterministic
 ```
+
+This locks RNG seeds, disables cuDNN benchmarking, enables `torch.use_deterministic_algorithms`, and sets cuBLAS workspace config.
 
 ### 2. DeterministicEngine (for LLM inference)
 
 ```python
 from detinfer import DeterministicEngine
 
-# Load any HuggingFace model + auto-fix all non-deterministic ops
+# Load any HuggingFace model + apply deterministic runtime settings
 engine = DeterministicEngine(seed=42)
-engine.load("<model>")  # e.g., "Qwen/Qwen2.5-0.5B-Instruct", "meta-llama/Llama-3-8B", etc.
+engine.load("<model>")  # e.g., "Qwen/Qwen2.5-0.5B-Instruct", "gpt2"
 
-# Run inference — same output every time, on any GPU
+# Run inference under deterministic settings
 result = engine.run("Write hello world in Python")
 print(result.text)            # The generated text
-print(result.canonical_hash)  # SHA-256 hash — identical across GPUs
+print(result.canonical_hash)  # SHA-256 hash for verification
 ```
 
-**For large models across multiple GPUs:**
+### 3. Deterministic Agent
 
-```python
-engine = DeterministicEngine(seed=42)
-engine.load("<model>", device_map="auto")
+Deterministic agent sessions with replayable execution traces.
 
-result = engine.run("Write hello world in Python")
-```
+`detinfer agent` runs supported generation workflows under deterministic settings, records token-level traces, and exports replayable session files for verification and debugging.
 
-### 3. Deterministic Chat Agent
+Both `chat()` and `chat_stream()` use manual token-by-token generation with deterministic argmax (smallest-token-ID tie-breaking).
 
 ```python
 from detinfer import DeterministicAgent
 
-# Multi-turn deterministic chat
+# Multi-turn deterministic agent
 agent = DeterministicAgent("gpt2", seed=42)
 response = agent.chat("What is 2+2?")
-print(response)  # Always the same answer
-
-response = agent.chat("Explain more")
-print(response)  # Always the same follow-up
+print(response)
 
 # With system prompt
-agent = DeterministicAgent("Qwen/Qwen2.5-0.5B-Instruct", seed=42, system_prompt="You are a math tutor")
+agent = DeterministicAgent(
+    "Qwen/Qwen2.5-0.5B-Instruct",
+    seed=42,
+    system_prompt="You are a math tutor"
+)
 response = agent.chat("What is calculus?")
 
 # Streaming output (tokens appear one by one)
 for chunk in agent.chat_stream("Explain gravity"):
     print(chunk, end="", flush=True)
 
-# Export full session trace (token-by-token proof)
+# Export full session trace
 agent.export_session("session.json")
 ```
 
-### 4. Verify Determinism
+### 4. Session Export & Trace
 
-```python
-# Run 5 times automatically, compare all hashes
-result = engine.verify(num_runs=5)
-print(result)
-# DETERMINISTIC: All 5 runs produced identical output
-# SHA-256: 799519fee8d50aca...
+Exported sessions contain:
+
+```json
+{
+  "schema_version": "1",
+  "model": "gpt2",
+  "seed": 42,
+  "messages": [
+    {"role": "user", "content": "What is 2+2?"},
+    {"role": "assistant", "content": "2+2 equals 4."}
+  ],
+  "generations": [
+    {
+      "input_tokens": [464, 318],
+      "output_tokens": [17, 10],
+      "steps": [
+        {"step": 0, "chosen_token": 17},
+        {"step": 1, "chosen_token": 10}
+      ]
+    }
+  ]
+}
 ```
 
-### 5. Training Verification
+With `--verbose-trace`, each step also includes `top_tokens` and `top_scores` (top-10 candidates).
 
-```python
-import detinfer
+### 5. Replay & Verification
 
-detinfer.enforce(seed=42)
-
-for step, batch in enumerate(dataloader):
-    loss = model(batch).loss
-    loss.backward()
-    optimizer.step()
-
-    # Hash model weights — identical across machines at same step
-    h = detinfer.checkpoint_hash(model)
-    print(f"Step {step}: {h}")
-```
-
-### 6. Cross-GPU Proof Verification
-
-Prove that two different GPUs produce the same output:
+`detinfer replay` re-runs a saved session and verifies prompt hashes, input tokens, output tokens, and stop conditions under the current runtime.
 
 ```bash
-# Machine A: export proof
+detinfer replay run.json
+```
+
+If a divergence occurs, the first mismatch is reported:
+
+```
+Replay verification: FAILED
+Mismatch at turn 2 step 18
+Expected token: 287
+Observed token: 318
+```
+
+### 6. Session Diffing
+
+`detinfer diff` compares two saved sessions and reports the first divergence point at the token/step level.
+
+```bash
+detinfer diff run_a.json run_b.json
+```
+
+### 7. Session Proof Verification
+
+```bash
+detinfer verify-session session.json
+```
+
+```
+  ══════════════════════════════════════════════════════════════
+    DETERMINISTIC EXECUTION PROOF VERIFICATION
+  ══════════════════════════════════════════════════════════════
+
+    Model:        gpt2
+    Seed:         42
+    Turns:        3
+
+    ✓ VERIFIED — All 3 turns match exactly
+    ✓ This session is a valid deterministic execution proof.
+  ══════════════════════════════════════════════════════════════
+```
+
+### 8. Cross-GPU Verification
+
+```bash
+# Machine A
 detinfer export <model> -o proof.json
 
-# Transfer proof.json to Machine B (scp, upload, etc.)
+# Transfer proof.json to Machine B
 
-# Machine B: verify
+# Machine B
 detinfer cross-verify proof.json
 ```
 
-```
-  CROSS-GPU VERIFICATION RESULT
-  =================================================================
+### 9. Verify Determinism
 
-  Original (remote):
-    GPU:            NVIDIA GeForce RTX 3070
-    Canonical hash: 799519fee8d50aca...
-
-  Local (this machine):
-    GPU:            Tesla T4
-    Canonical hash: 799519fee8d50aca...
-
-  Canonical hash match: ✓ YES
-
-  ✓ VERIFIED — Deterministic execution confirmed across GPUs!
+```python
+# Run 5 times, compare all hashes
+result = engine.verify(num_runs=5)
+print(result)
+# DETERMINISTIC: All 5 runs produced identical output
 ```
 
 ---
 
 ## CLI Reference
 
-### `detinfer run` — Interactive inference
-
-```bash
-detinfer run <model>
-detinfer run <model> --seed 42 --max-tokens 256
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--seed` | 42 | Random seed |
-| `--max-tokens` | 256 | Max tokens to generate |
-| `--device` | auto | Device (cpu, cuda, auto) |
-
-### `detinfer chat` — Deterministic chat agent
-
-```bash
-detinfer chat <model>
-detinfer chat <model> --prompt "What is 2+2?"
-detinfer chat <model> --stream
-detinfer chat <model> --system "You are a math tutor"
-detinfer chat <model> --export session.json
-detinfer chat <model> --quantize int8
-```
+### `detinfer agent`
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -270,119 +304,44 @@ detinfer chat <model> --quantize int8
 | `--device` | auto | Device (cpu, cuda, auto) |
 | `--export` | — | Export session trace to JSON |
 | `--quantize` | — | Quantization mode (`int8`, experimental) |
-| `--verbose-trace` | off | Record top-k tokens per step |
+| `--verbose-trace` | off | Record top-k tokens and scores per step |
 
-### `detinfer verify` — Verify determinism
-
-```bash
-detinfer verify <model>
-detinfer verify <model> --runs 10
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--runs` | 5 | Number of runs to compare |
-| `--seed` | 42 | Random seed |
-
-### `detinfer replay` — Replay a saved session
-
-```bash
-detinfer replay session.json
-detinfer replay session.json --strict
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--strict` | off | Verify every generation step, not just final tokens |
-| `--model` | — | Override model (uses trace model if not set) |
-
-### `detinfer verify-session` — Verify session as execution proof
-
-```bash
-detinfer verify-session session.json
-detinfer verify-session session.json --strict
-```
-
-Shows model info, session hash, environment, re-runs all turns, and reports if it's a valid deterministic execution proof.
+### `detinfer verify-session`
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--strict` | off | Verify every generation step |
 | `--model` | — | Override model |
 
-### `detinfer diff` — Compare two sessions
+### `detinfer replay`
 
-```bash
-detinfer diff run_a.json run_b.json
-```
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--strict` | off | Step-by-step verification |
+| `--model` | — | Override model |
 
-Token-level comparison of two session traces. Shows first mismatch.
+### `detinfer verify`
 
-### `detinfer scan` — Scan for non-deterministic ops
-
-```bash
-detinfer scan <model>
-```
-
-Detects Dropout, Flash Attention, and other non-deterministic operations in the model.
-
-### `detinfer compare` — Before vs after comparison
-
-```bash
-detinfer compare <model>
-```
-
-Runs the model first **without** detinfer (raw PyTorch) then **with** detinfer, showing hash differences side by side.
-
-### `detinfer benchmark` — Full determinism benchmark
-
-```bash
-detinfer benchmark <model>
-```
-
-Tests determinism across 8 categories of prompts (auto-scales based on model size):
-
-| Tier | Category | What it tests |
-|------|----------|--------------|
-| 1 | Sanity | Basic questions (baseline check) |
-| 2 | Long output | 200+ token generations (many CUDA ops) |
-| 3 | Uncertain | Creative prompts (model has low confidence) |
-| 4 | Complex code | Merge sort, LRU cache (deep computation) |
-| 5 | Reasoning | Logic puzzles, step-by-step (deep attention) |
-| 6 | Deep context | Long code + passage analysis |
-| 7 | Adversarial | FizzBuzz, pangrams (designed to break determinism) |
-| 8 | Edge cases | Unicode, empty, special characters |
-
-### `detinfer export` / `detinfer cross-verify` — Cross-GPU proofs
-
-```bash
-detinfer export <model> -o proof.json
-detinfer cross-verify proof.json
-```
-
-### `detinfer info` — Environment information
-
-```bash
-detinfer info
-```
-
-Shows GPU, PyTorch version, CUDA version, and determinism flags.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--runs` | 5 | Number of runs to compare |
+| `--seed` | 42 | Random seed |
 
 ---
 
 ## How It Works
 
-detinfer addresses 7 sources of non-determinism:
+detinfer applies deterministic runtime settings for 7 sources of non-determinism:
 
-| Source | Problem | detinfer Fix |
-|--------|---------|-------------|
-| Random seeds | Python, NumPy, PyTorch, CUDA each have separate RNGs | Locks ALL seeds in one call |
-| CUDA atomics | `scatter_add`, `index_add` use non-deterministic `atomicAdd` | Forces `torch.use_deterministic_algorithms(True)` |
+| Source | Problem | detinfer Setting |
+|--------|---------|-----------------|
+| Random seeds | Separate RNGs in Python, NumPy, PyTorch, CUDA | Locks all seeds in one call |
+| CUDA atomics | `scatter_add`, `index_add` use non-deterministic `atomicAdd` | Enables `torch.use_deterministic_algorithms(True)` |
 | Flash Attention | `scaled_dot_product_attention` is non-deterministic | Replaces with deterministic math backend |
 | cuDNN tuning | Auto-selects different algorithms per run | Disables benchmark mode |
 | cuBLAS workspace | Matrix multiplications vary with workspace config | Sets `CUBLAS_WORKSPACE_CONFIG=:4096:8` |
-| Float ordering | Different GPUs produce different float results | Canonicalizes outputs before hashing |
-| LLM sampling | `temperature`, `top_k`, `top_p` add randomness | Forces greedy decoding |
+| Float ordering | Different GPUs may produce different float results | Canonicalizes outputs before hashing |
+| LLM decoding | `temperature`, `top_k`, `top_p` add randomness | Uses deterministic argmax with stable tie-breaking |
 
 ---
 
@@ -407,7 +366,7 @@ detinfer/
     utils.py        # Hashing + env snapshots
 
   agent/            # Deterministic agent system
-    runtime.py      # DeterministicAgent — multi-turn chat
+    runtime.py      # DeterministicAgent — multi-turn agent with deterministic argmax
     trace.py        # Token-level trace recording + session schema
     replay.py       # Session replay verification + diff
 ```
@@ -421,7 +380,7 @@ detinfer/
 ```python
 import detinfer
 
-detinfer.enforce(seed=42)              # Lock all randomness
+detinfer.enforce(seed=42)              # Apply deterministic runtime settings
 detinfer.status()                       # Check enforcement state
 detinfer.checkpoint_hash(model)         # Hash model weights (for training)
 ```
@@ -431,9 +390,9 @@ detinfer.checkpoint_hash(model)         # Hash model weights (for training)
 | Method | Description |
 |--------|-------------|
 | `DeterministicEngine(seed, precision, device)` | Create engine |
-| `.load(model_name)` | Load HuggingFace model, auto-fix ops |
+| `.load(model_name)` | Load HuggingFace model, apply deterministic settings |
 | `.load(model_name, quantize="int8")` | Load with INT8 quantization (experimental) |
-| `.run(prompt, max_new_tokens)` | Deterministic inference |
+| `.run(prompt, max_new_tokens)` | Run inference under deterministic settings |
 | `.verify(prompt, num_runs)` | Run N times, compare hashes |
 | `.scan()` | Show enforcement report |
 
@@ -442,19 +401,10 @@ detinfer.checkpoint_hash(model)         # Hash model weights (for training)
 | Method | Description |
 |--------|-------------|
 | `DeterministicAgent(model, seed, system_prompt)` | Create agent |
-| `.chat(message)` | Send message, get deterministic response |
-| `.chat_stream(message)` | Stream tokens as they are generated |
+| `.chat(message)` | Send message, get response (deterministic argmax) |
+| `.chat_stream(message)` | Stream tokens as generated |
 | `.export_session(path)` | Export full token trace to JSON |
 | `.get_session_hash()` | Get canonical session hash |
-
-### Proof System
-
-| Function | Description |
-|----------|-------------|
-| `create_proof(engine, prompt)` | Run inference, create exportable proof |
-| `cross_verify(proof)` | Re-run locally, compare with proof |
-| `InferenceProof.save(path)` | Export proof to JSON |
-| `InferenceProof.load(path)` | Load proof from JSON |
 
 ### Replay & Diff
 
@@ -480,50 +430,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Verify a saved session is still reproducible
       - uses: xailong-6969/detinfer@v2-enforcement
         with:
           command: verify-session
           session-file: baseline.json
           strict: true
-
-      # Or generate + export a new session
-      - uses: xailong-6969/detinfer@v2-enforcement
-        with:
-          command: chat
-          model: gpt2
-          prompt: "What is 2+2?"
-          export: output.json
 ```
 
 ---
 
-## Supported Matrix
+## Support Status
+
+### Supported
+
+- Single-process HuggingFace causal LM inference
+- Deterministic agent session export and replay
+- Token-level diffing for saved sessions
+- Greedy decoding paths under controlled runtime settings
+
+### Experimental
+
+- INT8 quantized mode (may improve consistency, not guaranteed bitwise identical)
+- Cross-device consistency checks
+- Streaming/verbose trace paths
+
+### Not Guaranteed
+
+- Universal determinism for arbitrary PyTorch code
+- Bitwise-identical results across all GPU architectures
+- Distributed training or asynchronous multi-node systems
+- External API or tool call determinism
+
+### Detailed Compatibility
 
 | Feature | Status | Notes |
 |---|---|---|
-| PyTorch eager mode | **Fully supported** | Default, fully deterministic |
-| Greedy decoding | **Fully supported** | Enforced automatically (`do_sample=False`, `num_beams=1`) |
-| fp32 inference | **Fully supported** | Full determinism |
-| fp16 inference | **Fully supported** | Deterministic on supported backends |
-| CPU inference | **Fully supported** | Fully deterministic |
-| NVIDIA GPU (single) | **Fully supported** | T4, V100, A100, RTX 3070/4090, etc. |
-| HuggingFace CausalLM | **Fully supported** | GPT-2, Qwen, TinyLlama, LLaMA, etc. |
-| Cross-GPU canonical hashes | **Fully supported** | Via `detinfer export` + `detinfer cross-verify` |
-| bf16 inference | Partial | Hardware-dependent rounding; canonical hash may differ across GPU generations |
-| Multi-GPU (`device_map="auto"`) | Partial | Inference works; very large models may have split-order edge cases |
-| Flash Attention | Partial | Auto-replaced with MATH backend; may reduce throughput |
-| Quantized models (INT8 via bitsandbytes) | **Experimental** | May improve cross-device consistency; not guaranteed bitwise identical |
-| Quantized models (GPTQ/AWQ) | **Not supported** | Kernel-specific rounding breaks cross-machine proof |
-| `torch.compile` | **Not supported** | Graph autotuning selects different kernels across runs |
-| Beam search (`num_beams > 1`) | **Not supported** | Tie-breaking is implementation-specific |
-| Speculative decoding | **Not supported** | Draft model adds nondeterminism |
-| vLLM / paged attention | **Not supported** | KV cache paging is non-deterministic |
-| Tensor / pipeline parallelism | **Not supported** | Reduction order across devices not controlled |
+| PyTorch eager mode | **Supported** | Default execution mode |
+| Greedy decoding | **Supported** | Enforced via deterministic argmax |
+| fp32 / fp16 inference | **Supported** | Deterministic on supported backends |
+| CPU inference | **Supported** | Fully deterministic |
+| NVIDIA GPU (single) | **Supported** | T4, V100, A100, RTX 3070/4090, etc. |
+| HuggingFace CausalLM | **Supported** | GPT-2, Qwen, TinyLlama, LLaMA, etc. |
+| bf16 inference | Partial | Hardware-dependent rounding may differ |
+| Multi-GPU (`device_map="auto"`) | Partial | May have split-order edge cases |
+| Flash Attention | Partial | Auto-replaced with MATH backend |
+| INT8 (bitsandbytes) | **Experimental** | May improve consistency |
+| GPTQ/AWQ quantization | **Not supported** | Kernel-specific rounding |
+| `torch.compile` | **Not supported** | Graph autotuning |
+| Beam search | **Not supported** | Tie-breaking is implementation-specific |
+| vLLM / paged attention | **Not supported** | KV cache paging |
 | AMD GPUs (ROCm) | Untested | |
 | Apple Silicon (MPS) | Untested | |
-
-> For the full technical specification — see [docs/determinism-spec.md](docs/determinism-spec.md).
 
 ---
 

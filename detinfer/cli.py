@@ -3,7 +3,7 @@ detinfer.cli -- Command-Line Interface
 
 Provides the `detinfer` command with subcommands:
   detinfer run <model>              -- Interactive deterministic inference
-  detinfer chat <model>             -- Deterministic multi-turn chat agent
+  detinfer agent <model>             -- Deterministic multi-turn agent
   detinfer replay <session.json>    -- Replay and verify a saved session
   detinfer diff <a.json> <b.json>   -- Token-level comparison of two sessions
   detinfer scan <model>             -- Scan for non-deterministic ops
@@ -48,7 +48,7 @@ def cmd_scan(args: argparse.Namespace) -> None:
 
 def cmd_verify(args: argparse.Namespace) -> None:
     """Verify a model produces deterministic output."""
-    from detinfer.engine import DeterministicEngine
+    from detinfer.inference.engine import DeterministicEngine
 
     print(f"Loading model: {args.model}...")
     engine = DeterministicEngine(
@@ -264,8 +264,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         print("\nGoodbye!")
 
 
-def cmd_chat(args: argparse.Namespace) -> None:
-    """Deterministic multi-turn chat agent."""
+def cmd_agent(args: argparse.Namespace) -> None:
+    """Deterministic multi-turn agent."""
     from detinfer.agent.runtime import DeterministicAgent
 
     print(f"Loading model: {args.model}...")
@@ -484,18 +484,18 @@ def main() -> None:
     run_parser.add_argument("--device", default=None, help="Device (default: auto)")
     run_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens (default: 256)")
 
-    # -- detinfer chat <model> --
-    chat_parser = subparsers.add_parser("chat", help="Deterministic multi-turn chat agent")
-    chat_parser.add_argument("model", help="HuggingFace model name")
-    chat_parser.add_argument("--prompt", default=None, help="Non-interactive: single prompt (for CI/scripts)")
-    chat_parser.add_argument("--export", default=None, help="Export session trace to JSON file")
-    chat_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
-    chat_parser.add_argument("--device", default=None, help="Device (default: auto)")
-    chat_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per turn (default: 256)")
-    chat_parser.add_argument("--system", default=None, help="System prompt (e.g., 'You are a math tutor')")
-    chat_parser.add_argument("--quantize", default=None, choices=["int8"], help="Quantization mode (experimental)")
-    chat_parser.add_argument("--verbose-trace", action="store_true", help="Record top-k tokens per step")
-    chat_parser.add_argument("--stream", action="store_true", help="Stream tokens as they are generated")
+    # -- detinfer agent <model> --
+    agent_parser = subparsers.add_parser("agent", help="Deterministic multi-turn agent")
+    agent_parser.add_argument("model", help="HuggingFace model name")
+    agent_parser.add_argument("--prompt", default=None, help="Non-interactive: single prompt (for CI/scripts)")
+    agent_parser.add_argument("--export", default=None, help="Export session trace to JSON file")
+    agent_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    agent_parser.add_argument("--device", default=None, help="Device (default: auto)")
+    agent_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per turn (default: 256)")
+    agent_parser.add_argument("--system", default=None, help="System prompt (e.g., 'You are a math tutor')")
+    agent_parser.add_argument("--quantize", default=None, choices=["int8"], help="Quantization mode (experimental)")
+    agent_parser.add_argument("--verbose-trace", action="store_true", help="Record top-k tokens per step")
+    agent_parser.add_argument("--stream", action="store_true", help="Stream tokens as they are generated")
 
     # -- detinfer replay <session.json> --
     replay_parser = subparsers.add_parser("replay", help="Replay and verify a saved session")
@@ -529,7 +529,7 @@ def main() -> None:
         "export": cmd_export,
         "cross-verify": cmd_cross_verify,
         "run": cmd_run,
-        "chat": cmd_chat,
+        "agent": cmd_agent,
         "replay": cmd_replay,
         "diff": cmd_diff,
         "verify-session": cmd_verify_session,

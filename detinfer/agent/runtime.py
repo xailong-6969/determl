@@ -144,8 +144,9 @@ class DeterministicAgent:
     def chat(self, message: str) -> str:
         """Send a message and get a deterministic response.
 
-        Re-seeds RNG before each generation for strict reproducibility.
-        Records full token trace for the generation.
+        Uses manual token-by-token generation with deterministic
+        argmax (smallest-token-ID tie-breaking) for strict
+        reproducibility. Records full token trace.
 
         Args:
             message: User message.
@@ -179,34 +180,56 @@ class DeterministicAgent:
             input_tokens=input_token_ids,
         )
 
-        # Generate with tracing
+        tokenizer = self.engine.tokenizer
+        eos_id = tokenizer.eos_token_id
+        generated_ids = []
+        current_ids = inputs["input_ids"]
+        verbose = self.trace_mode == "topk"
+
+        # Token-by-token generation with deterministic argmax
         with torch.no_grad(), self.engine.enforcer.deterministic_context():
-            output_ids = self.engine.model.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                do_sample=False,
-                num_beams=1,
-            )
+            for step in range(self.max_new_tokens):
+                outputs = self.engine.model(current_ids)
+                next_logits = outputs.logits[0, -1, :]
 
-        # Extract generated tokens
-        prompt_length = inputs["input_ids"].shape[1]
-        generated_ids = output_ids[0, prompt_length:]
-        output_token_ids = generated_ids.tolist()
+                # Deterministic argmax with stable tie-breaking
+                next_token = deterministic_argmax(next_logits)
+                token_id = next_token.item()
 
-        # Record steps (one per generated token)
-        for i, token_id in enumerate(output_token_ids):
-            gen_trace.add_step(step=i, chosen_token=token_id)
+                # Capture top-k for verbose trace
+                top_tokens = None
+                top_scores = None
+                if verbose:
+                    k = min(10, next_logits.shape[0])
+                    top_vals, top_ids = torch.topk(next_logits, k)
+                    top_tokens = top_ids.tolist()
+                    top_scores = [round(v, 6) for v in top_vals.tolist()]
+
+                gen_trace.add_step(
+                    step=step,
+                    chosen_token=token_id,
+                    top_tokens=top_tokens,
+                    top_scores=top_scores,
+                )
+                generated_ids.append(token_id)
+
+                # Stop on EOS
+                if token_id == eos_id:
+                    break
+
+                # Append token for next iteration
+                next_token_tensor = next_token.unsqueeze(0).unsqueeze(0).to(input_device)
+                current_ids = torch.cat([current_ids, next_token_tensor], dim=1)
 
         # Set output tokens and finalize
-        gen_trace.output_tokens = output_token_ids
-        eos_id = self.engine.tokenizer.eos_token_id
+        gen_trace.output_tokens = generated_ids
         gen_trace.finalize(eos_token_id=eos_id)
 
         # Add to session
         self.session.add_generation(gen_trace)
 
         # Decode response
-        response = self.engine.tokenizer.decode(
+        response = tokenizer.decode(
             generated_ids, skip_special_tokens=True
         ).strip()
 
@@ -259,6 +282,7 @@ class DeterministicAgent:
         eos_id = tokenizer.eos_token_id
         generated_ids = []
         current_ids = inputs["input_ids"]
+        verbose = self.trace_mode == "topk"
 
         # Token-by-token generation with streaming
         with torch.no_grad(), self.engine.enforcer.deterministic_context():
@@ -270,8 +294,22 @@ class DeterministicAgent:
                 next_token = deterministic_argmax(next_logits)
                 token_id = next_token.item()
 
+                # Capture top-k for verbose trace
+                top_tokens = None
+                top_scores = None
+                if verbose:
+                    k = min(10, next_logits.shape[0])
+                    top_vals, top_ids = torch.topk(next_logits, k)
+                    top_tokens = top_ids.tolist()
+                    top_scores = [round(v, 6) for v in top_vals.tolist()]
+
                 # Record trace step
-                gen_trace.add_step(step=step, chosen_token=token_id)
+                gen_trace.add_step(
+                    step=step,
+                    chosen_token=token_id,
+                    top_tokens=top_tokens,
+                    top_scores=top_scores,
+                )
                 generated_ids.append(token_id)
 
                 # Decode just this token and yield

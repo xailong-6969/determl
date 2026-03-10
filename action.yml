@@ -6,17 +6,17 @@ branding:
 
 inputs:
   command:
-    description: 'Command to run: verify-session, chat, verify'
+    description: 'Command to run: verify-session, agent, verify'
     required: true
     default: 'verify-session'
   session-file:
     description: 'Path to session JSON file (for verify-session command)'
     required: false
   model:
-    description: 'HuggingFace model name (for chat/verify commands)'
+    description: 'HuggingFace model name (for agent/verify commands)'
     required: false
   prompt:
-    description: 'Prompt for non-interactive chat'
+    description: 'Prompt for non-interactive agent'
     required: false
   seed:
     description: 'Random seed'
@@ -78,7 +78,7 @@ runs:
             exit 1
           fi
 
-        elif [ "$COMMAND" = "chat" ]; then
+        elif [ "$COMMAND" = "agent" ]; then
           ARGS="${{ inputs.model }} --seed ${{ inputs.seed }}"
           if [ "${{ inputs.prompt }}" != "" ]; then
             ARGS="$ARGS --prompt \"${{ inputs.prompt }}\""
@@ -86,7 +86,7 @@ runs:
           if [ "${{ inputs.export }}" != "" ]; then
             ARGS="$ARGS --export ${{ inputs.export }}"
           fi
-          eval detinfer chat $ARGS
+          eval detinfer agent $ARGS
           echo "passed=true" >> $GITHUB_OUTPUT
 
         elif [ "$COMMAND" = "verify" ]; then
