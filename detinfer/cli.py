@@ -208,28 +208,28 @@ def cmd_compare(args: argparse.Namespace) -> None:
     report = engine.load(args.model)
     print(f"\n{report}\n")
 
-    determl_hashes = []
+    detinfer_hashes = []
     for i in range(num_runs):
         result = engine.run(prompt, max_new_tokens=50)
         h = result.canonical_hash
-        determl_hashes.append(h)
-        match = "" if i == 0 else (" ✓ same" if h == determl_hashes[0] else " ✗ DIFFERENT")
+        detinfer_hashes.append(h)
+        match = "" if i == 0 else (" ✓ same" if h == detinfer_hashes[0] else " ✗ DIFFERENT")
         print(f"  Run {i+1}: {h}{match}")
 
-    unique_determl = len(set(determl_hashes))
-    if unique_determl == 1:
+    unique_detinfer = len(set(detinfer_hashes))
+    if unique_detinfer == 1:
         print(f"\n  Result: DETERMINISTIC — All {num_runs} hashes identical!")
     else:
-        print(f"\n  Result: {unique_determl} different hashes")
+        print(f"\n  Result: {unique_detinfer} different hashes")
 
     # ── Summary ──
     print("\n" + "=" * 60)
     print("  COMPARISON SUMMARY")
     print("=" * 60)
     print(f"  Without detinfer: {unique_raw} unique hash(es) across {num_runs} runs")
-    print(f"  With detinfer:    {unique_determl} unique hash(es) across {num_runs} runs")
-    if unique_determl == 1:
-        print(f"\n  ✓ detinfer canonical hash: {determl_hashes[0]}")
+    print(f"  With detinfer:    {unique_detinfer} unique hash(es) across {num_runs} runs")
+    if unique_detinfer == 1:
+        print(f"\n  ✓ detinfer canonical hash: {detinfer_hashes[0]}")
         print(f"  ✓ Seed: {args.seed}")
         print(f"  ✓ This hash will be identical on any machine with the same model.")
     print()

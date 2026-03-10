@@ -31,7 +31,7 @@ cat << "EOF"
 | (_| |  __/ ||  __/ |  | | | | |
  \__,_|\___|\__\___|_|  |_| |_|_|
 
-  Deterministic ML Inference Engine v2
+  Deterministic ML Inference & Agent Toolkit
 
 EOF
 echo -e "${RESET}"
@@ -122,10 +122,13 @@ while true; do
     echo "   5) benchmark    - Full determinism benchmark (auto-scales)"
     echo "   6) export       - Export inference proof (for cross-GPU verify)"
     echo "   7) cross-verify - Verify a proof from another machine"
-    echo "   8) info         - Show environment information"
-    echo "   9) exit         - Exit detinfer"
+    echo "   8) agent        - Multi-turn deterministic agent"
+    echo "   9) replay       - Replay a saved agent session"
+    echo "  10) diff         - Diff two session traces"
+    echo "  11) info         - Show environment information"
+    echo "  12) exit         - Exit detinfer"
     echo ""
-    echo -en "${GREEN}>> Choose [1-9] (default: 1): ${RESET}"
+    echo -en "${GREEN}>> Choose [1-12] (default: 1): ${RESET}"
     read -p "" MODE_CHOICE
 
     case "${MODE_CHOICE:-1}" in
@@ -158,15 +161,31 @@ while true; do
             read -p "" PROOF_FILE
             detinfer cross-verify "${PROOF_FILE:-proof.json}"
             ;;
-        8|info)
+        8|agent)
+            echo_green ">> Starting agent..."
+            detinfer agent "$MODEL_NAME" --seed "$SEED"
+            ;;
+        9|replay)
+            echo -en "${GREEN}>> Enter session file path: ${RESET}"
+            read -p "" SESSION_FILE
+            detinfer replay "${SESSION_FILE:-session.json}"
+            ;;
+        10|diff)
+            echo -en "${GREEN}>> Enter first trace file: ${RESET}"
+            read -p "" TRACE_A
+            echo -en "${GREEN}>> Enter second trace file: ${RESET}"
+            read -p "" TRACE_B
+            detinfer diff "$TRACE_A" "$TRACE_B"
+            ;;
+        11|info)
             detinfer info
             ;;
-        9|exit|quit|q)
+        12|exit|quit|q)
             echo_green ">> Done!"
             break
             ;;
         *)
-            echo_red ">> Invalid choice. Please select 1-9."
+            echo_red ">> Invalid choice. Please select 1-12."
             ;;
     esac
 done

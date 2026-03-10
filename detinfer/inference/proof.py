@@ -47,7 +47,7 @@ class InferenceProof:
 
     # Metadata
     timestamp: str = ""
-    determl_version: str = "2.0.0"
+    detinfer_version: str = "0.2.2"
     
     # Token-level details (Gold standard schema)
     input_tokens_hash: str = ""

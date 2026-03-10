@@ -131,7 +131,7 @@ The `proof.json` exported by `detinfer export` contains the following fields:
   "python_version": "3.11.0",
   "platform": "Linux...",
   "timestamp": "2026-03-09T10:00:00+00:00",
-  "determl_version": "2.0.0"
+  "detinfer_version": "0.2.2"
 }
 ```
 
