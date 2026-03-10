@@ -509,7 +509,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: xailong-6969/detinfer@v2-enforcement
+      - uses: xailong-6969/detinfer@main
         with:
           command: verify-session
           session-file: baseline.json
