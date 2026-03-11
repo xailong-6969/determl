@@ -36,6 +36,22 @@ detinfer.enforce()  # Apply deterministic runtime settings
 
 ---
 
+## Note on Determinism
+
+detinfer enforces deterministic execution by disabling stochastic sampling (temperature/top-p) and enabling deterministic CUDA execution modes. This ensures that identical inputs produce identical outputs when run under the same environment.
+
+The determinism stack includes:
+- Disabling sampling (`do_sample=False`, greedy decoding)
+- Locking RNG seeds (PyTorch, Python, NumPy, CUDA)
+- Forcing deterministic CUDA ops (`torch.use_deterministic_algorithms`)
+- Disabling cuDNN autotuning
+- Canonicalizing floating-point outputs
+- Hashing results for verification
+
+Cross-device determinism is best-effort and depends on the underlying hardware and kernels used by the model.
+
+---
+
 ## Installation
 
 ```bash
@@ -89,6 +105,8 @@ detinfer compare <model>                            # Before vs after detinfer c
 detinfer benchmark <model>                          # Full benchmark (auto-scales by model size)
 detinfer export <model> -o proof.json               # Export proof for cross-GPU verification
 detinfer cross-verify proof.json                    # Verify proof from another machine
+detinfer doctor <model>                             # Determinism health check & audit
+detinfer doctor <model> --json                      # JSON report for CI pipelines
 
 # ══════════════════════════════════════
 # AGENT
@@ -96,7 +114,6 @@ detinfer cross-verify proof.json                    # Verify proof from another 
 
 detinfer agent <model>                              # Multi-turn deterministic agent
 detinfer agent <model> --prompt "What is 2+2?"      # Non-interactive (single question)
-detinfer agent <model> --stream                     # Stream tokens in real-time
 detinfer agent <model> --system "You are a tutor"   # Set system prompt
 detinfer agent <model> --export session.json        # Export session trace
 detinfer agent <model> --quantize int8              # Experimental INT8 mode

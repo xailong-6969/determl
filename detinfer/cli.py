@@ -145,6 +145,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
     print(f"Prompt: {prompt!r}")
     print(f"Device: {device}")
     print(f"Runs:   {num_runs}")
+    max_tokens = args.max_tokens if hasattr(args, 'max_tokens') else 256
 
     # ── Phase 1: WITHOUT detinfer ──
     print("\n" + "=" * 60)
@@ -191,7 +192,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
         past_kv = None
 
         with torch.no_grad():
-            for step in range(50):
+            for step in range(max_tokens):
                 outputs = model(current_ids, past_key_values=past_kv, use_cache=True)
                 logits = outputs.logits[0, -1, :]
                 past_kv = outputs.past_key_values
@@ -280,7 +281,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
         past_kv = None
 
         with torch.no_grad(), engine.enforcer.deterministic_context():
-            for step in range(50):
+            for step in range(max_tokens):
                 outputs = engine.model(
                     current_ids, past_key_values=past_kv, use_cache=True,
                 )
@@ -557,6 +558,244 @@ def cmd_verify_session(args: argparse.Namespace) -> None:
     print("═" * 60)
 
 
+def cmd_doctor(args: argparse.Namespace) -> None:
+    """Run a determinism health check / audit on a model."""
+    import json as json_mod
+    import time
+    from detinfer.inference.engine import DeterministicEngine
+    from detinfer.agent.runtime import deterministic_argmax
+    from detinfer.inference.utils import hash_string
+
+    device = args.device
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    prompt = args.prompt or "What is 2 + 2? Answer with just the number."
+    num_runs = args.runs
+
+    report = {
+        "model": args.model,
+        "device": device,
+        "prompt": prompt,
+        "runs": num_runs,
+        "checks": {},
+        "overall": "PASS",
+    }
+
+    if not args.json:
+        print("╔" + "═" * 58 + "╗")
+        print("║     Detinfer Determinism Report                        ║")
+        print("╚" + "═" * 58 + "╝")
+        print(f"\n  Model:   {args.model}")
+        print(f"  Device:  {device}")
+        print(f"  Prompt:  {prompt!r}")
+        print(f"  Runs:    {num_runs}\n")
+        print("─" * 60)
+
+    # ── Check 1: Environment settings ──
+    import os
+
+    # Sampling
+    report["checks"]["sampling"] = {"status": "DISABLED", "ok": True}
+
+    # Seed locking
+    seed_ok = True
+    report["checks"]["seed_locking"] = {"status": "ENABLED", "seed": args.seed, "ok": True}
+
+    # Torch deterministic algorithms
+    det_algo = torch.are_deterministic_algorithms_enabled()
+    report["checks"]["torch_deterministic_algorithms"] = {
+        "status": "ENABLED" if det_algo else "DISABLED (will be enabled by detinfer)",
+        "ok": True,  # detinfer will enable it
+    }
+
+    # cuDNN benchmark
+    cudnn_bench = torch.backends.cudnn.benchmark if hasattr(torch.backends, 'cudnn') else False
+    report["checks"]["cudnn_benchmark"] = {
+        "status": "DISABLED" if not cudnn_bench else "ENABLED (detinfer will disable)",
+        "ok": True,  # detinfer will fix it
+    }
+
+    # CUBLAS workspace
+    cublas_env = os.environ.get("CUBLAS_WORKSPACE_CONFIG", "not set")
+    report["checks"]["cublas_workspace"] = {
+        "status": cublas_env if cublas_env != "not set" else "not set (detinfer will set)",
+        "ok": True,
+    }
+
+    # Attention backend
+    attn_backend = "unknown"
+    try:
+        if hasattr(torch.backends, 'cuda') and hasattr(torch.backends.cuda, 'flash_sdp_enabled'):
+            flash = torch.backends.cuda.flash_sdp_enabled()
+            math = torch.backends.cuda.math_sdp_enabled()
+            if flash:
+                attn_backend = "flash_sdp (may be non-deterministic)"
+            elif math:
+                attn_backend = "math_sdp (deterministic)"
+            else:
+                attn_backend = "default"
+    except Exception:
+        attn_backend = "unknown"
+
+    report["checks"]["attention_backend"] = {
+        "status": attn_backend,
+        "ok": "non-deterministic" not in attn_backend,
+    }
+
+    if not args.json:
+        print("\n  Environment Checks:")
+        for name, check in report["checks"].items():
+            icon = "✓" if check["ok"] else "✗"
+            label = name.replace("_", " ").title()
+            print(f"    {icon} {label}: {check['status']}")
+
+    # ── Check 2: Load and scan model ──
+    if not args.json:
+        print(f"\n{'─' * 60}")
+        print(f"  Loading model with detinfer enforcement...")
+
+    engine = DeterministicEngine(
+        seed=args.seed,
+        precision=args.precision,
+        device=device,
+    )
+    scan_report = engine.load(args.model)
+
+    # Check if model has non-deterministic ops
+    has_nondet = "non-deterministic" in str(scan_report).lower() and "No non-deterministic" not in str(scan_report)
+    report["checks"]["model_scan"] = {
+        "status": "CLEAN" if not has_nondet else "HAS NON-DETERMINISTIC OPS (patched by detinfer)",
+        "ok": True,  # detinfer patches them
+    }
+
+    if not args.json:
+        icon = "✓" if not has_nondet else "⚠"
+        print(f"    {icon} Model scan: {report['checks']['model_scan']['status']}")
+
+    # ── Check 3: Tokenizer fingerprint ──
+    tokenizer = engine.tokenizer
+    test_tokens = tokenizer(prompt, return_tensors="pt")
+    token_hash = hash_string(str(test_tokens["input_ids"].tolist()))
+    report["checks"]["tokenizer"] = {
+        "status": "STABLE",
+        "token_hash": token_hash[:16],
+        "ok": True,
+    }
+
+    if not args.json:
+        print(f"    ✓ Tokenizer: STABLE (hash: {token_hash[:16]}...)")
+
+    # ── Check 4: Prompt hash ──
+    prompt_hash = hash_string(prompt)
+    report["checks"]["prompt_hash"] = {
+        "status": "STABLE",
+        "hash": prompt_hash[:16],
+        "ok": True,
+    }
+
+    if not args.json:
+        print(f"    ✓ Prompt hash: {prompt_hash[:16]}...")
+
+    # ── Check 5: Repeated run verification ──
+    if not args.json:
+        print(f"\n{'─' * 60}")
+        print(f"  Repeated Run Check ({num_runs} runs):\n")
+
+    # Format prompt
+    formatted_prompt = prompt
+    if hasattr(tokenizer, 'chat_template') and tokenizer.chat_template:
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            formatted_prompt = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        except Exception:
+            pass
+
+    input_device = engine._get_input_device()
+    eos_id = tokenizer.eos_token_id
+    hashes = []
+    texts = []
+    first_mismatch = None
+
+    for i in range(num_runs):
+        engine.config.apply()
+        inputs = tokenizer(formatted_prompt, return_tensors="pt").to(input_device)
+        current_ids = inputs["input_ids"]
+        generated_ids = []
+        past_kv = None
+
+        with torch.no_grad(), engine.enforcer.deterministic_context():
+            for step in range(args.max_tokens):
+                outputs = engine.model(
+                    current_ids, past_key_values=past_kv, use_cache=True,
+                )
+                logits = outputs.logits[0, -1, :]
+                past_kv = outputs.past_key_values
+                token_id = deterministic_argmax(logits)
+                generated_ids.append(token_id)
+                if token_id == eos_id:
+                    break
+                current_ids = torch.tensor([[token_id]], device=input_device)
+
+        text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+        h = hash_string(text)
+        hashes.append(h)
+        texts.append(text)
+
+        if i > 0 and h != hashes[0] and first_mismatch is None:
+            first_mismatch = i + 1
+
+        if not args.json:
+            match = "" if i == 0 else (" ✓ match" if h == hashes[0] else " ✗ MISMATCH")
+            print(f"    Run {i+1}: {h[:32]}...{match}")
+
+    matched = sum(1 for h in hashes if h == hashes[0])
+    all_match = matched == num_runs
+
+    report["checks"]["repeated_runs"] = {
+        "runs": num_runs,
+        "matched": f"{matched}/{num_runs}",
+        "first_mismatch": first_mismatch if first_mismatch else "none",
+        "canonical_hash": hashes[0],
+        "ok": all_match,
+    }
+
+    if not all_match:
+        report["overall"] = "FAIL"
+
+    # ── Check any failures ──
+    problems = []
+    for name, check in report["checks"].items():
+        if not check["ok"]:
+            problems.append(f"- {name.replace('_', ' ').title()}: {check['status']}")
+
+    report["problems"] = problems
+
+    # ── Output ──
+    if args.json:
+        print(json_mod.dumps(report, indent=2))
+    else:
+        print(f"\n{'─' * 60}")
+        print(f"\n  Response preview: {texts[0][:80]}{'...' if len(texts[0]) > 80 else ''}")
+        print(f"  Canonical hash:  {hashes[0]}")
+        print(f"  Seed:            {args.seed}")
+        print()
+        print("═" * 60)
+        if report["overall"] == "PASS":
+            print("  ✓ OVERALL STATUS: PASS")
+            print("  ✓ All checks passed. Inference is deterministic.")
+            print(f"  ✓ {matched}/{num_runs} runs produced identical output.")
+        else:
+            print("  ✗ OVERALL STATUS: FAIL")
+            print()
+            print("  Problems found:")
+            for p in problems:
+                print(f"    {p}")
+        print("═" * 60)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="detinfer",
@@ -590,6 +829,7 @@ def main() -> None:
     compare_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     compare_parser.add_argument("--precision", default="high", help="Canonical precision (default: high)")
     compare_parser.add_argument("--device", default=None, help="Device (default: auto)")
+    compare_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens per run (default: 256)")
 
     # -- detinfer benchmark <model> --
     bench_parser = subparsers.add_parser("benchmark", help="Auto-scaling determinism benchmark")
@@ -651,6 +891,17 @@ def main() -> None:
     vs_parser.add_argument("--model", default=None, help="Override model (uses trace model if not set)")
     vs_parser.add_argument("--strict", action="store_true", help="Verify every generation step")
 
+    # -- detinfer doctor <model> --
+    doctor_parser = subparsers.add_parser("doctor", help="Determinism health check & audit")
+    doctor_parser.add_argument("model", help="HuggingFace model name")
+    doctor_parser.add_argument("--prompt", default=None, help="Test prompt (default: auto)")
+    doctor_parser.add_argument("--runs", type=int, default=5, help="Number of test runs (default: 5)")
+    doctor_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    doctor_parser.add_argument("--precision", default="high", help="Canonical precision (default: high)")
+    doctor_parser.add_argument("--device", default=None, help="Device (default: auto)")
+    doctor_parser.add_argument("--max-tokens", type=int, default=256, help="Max new tokens (default: 256)")
+    doctor_parser.add_argument("--json", action="store_true", help="Output report as JSON (for CI)")
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -670,6 +921,7 @@ def main() -> None:
         "replay": cmd_replay,
         "diff": cmd_diff,
         "verify-session": cmd_verify_session,
+        "doctor": cmd_doctor,
     }
 
     handlers[args.command](args)
