@@ -173,13 +173,20 @@ def cmd_compare(args: argparse.Namespace) -> None:
                 do_sample=True,
                 temperature=0.7,
             )
+        prompt_length = inputs["input_ids"].shape[1]
+        generated_ids = output[0, prompt_length:]
+        text = tokenizer.decode(generated_ids, skip_special_tokens=True)
         output_bytes = output.cpu().numpy().tobytes()
         h = hashlib.sha256(output_bytes).hexdigest()
-        text = tokenizer.decode(output[0], skip_special_tokens=True)
         raw_hashes.append(h)
         raw_texts.append(text)
         match = "" if i == 0 else (" ✓ same" if h == raw_hashes[0] else " ✗ DIFFERENT")
-        print(f"  Run {i+1}: {h}{match}")
+        print(f"  Run {i+1}: ", end="", flush=True)
+        # Stream the text character by character
+        for ch in text:
+            print(ch, end="", flush=True)
+            import time; time.sleep(0.01)
+        print(f"\n          {h[:32]}...{match}")
 
     unique_raw = len(set(raw_hashes))
     if unique_raw == 1:
@@ -214,7 +221,12 @@ def cmd_compare(args: argparse.Namespace) -> None:
         h = result.canonical_hash
         detinfer_hashes.append(h)
         match = "" if i == 0 else (" ✓ same" if h == detinfer_hashes[0] else " ✗ DIFFERENT")
-        print(f"  Run {i+1}: {h}{match}")
+        print(f"  Run {i+1}: ", end="", flush=True)
+        # Stream the text character by character
+        for ch in (result.text or ""):
+            print(ch, end="", flush=True)
+            import time; time.sleep(0.01)
+        print(f"\n          {h[:32]}...{match}")
 
     unique_detinfer = len(set(detinfer_hashes))
     if unique_detinfer == 1:
@@ -257,11 +269,70 @@ def cmd_run(args: argparse.Namespace) -> None:
             if not prompt:
                 continue
 
-            result = engine.run(prompt, max_new_tokens=args.max_tokens)
-            print(f"\n{result}\n")
+            _run_stream(engine, prompt, args.max_tokens)
 
     except (KeyboardInterrupt, EOFError):
         print("\nGoodbye!")
+
+
+def _run_stream(engine, prompt: str, max_new_tokens: int) -> None:
+    """Stream tokens one-by-one for detinfer run."""
+    import sys
+    import torch
+    from detinfer.inference.utils import hash_string
+    from detinfer.inference.canonicalizer import deterministic_argmax
+
+    engine.config.apply()
+
+    # Format prompt with chat template if available
+    formatted_prompt = prompt
+    tokenizer = engine.tokenizer
+    if hasattr(tokenizer, 'chat_template') and tokenizer.chat_template:
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            formatted_prompt = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        except Exception:
+            pass
+
+    input_device = engine._get_input_device()
+    inputs = tokenizer(formatted_prompt, return_tensors="pt").to(input_device)
+    current_ids = inputs["input_ids"]
+    eos_id = tokenizer.eos_token_id
+    generated_ids = []
+    past_key_values = None
+
+    print("\nOutput: ", end="", flush=True)
+
+    with torch.no_grad(), engine.enforcer.deterministic_context():
+        for step in range(max_new_tokens):
+            outputs = engine.model(
+                current_ids, past_key_values=past_key_values,
+                use_cache=True,
+            )
+            next_logits = outputs.logits[0, -1, :]
+            past_key_values = outputs.past_key_values
+
+            token_id = deterministic_argmax(next_logits)
+            generated_ids.append(token_id)
+
+            # Stream the token
+            chunk = tokenizer.decode([token_id], skip_special_tokens=True)
+            if chunk:
+                print(chunk, end="", flush=True)
+
+            if token_id == eos_id:
+                break
+
+            current_ids = torch.tensor([[token_id]], device=input_device)
+
+    # Print hash info
+    text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+    text_hash = hash_string(text)
+    print(f"\nHash: {text_hash}")
+    print(f"Precision: {engine.precision.value} | Seed: {engine.seed}\n")
+
 
 
 def cmd_agent(args: argparse.Namespace) -> None:
@@ -286,17 +357,11 @@ def cmd_agent(args: argparse.Namespace) -> None:
 
     # Non-interactive mode
     if args.prompt:
-        if args.stream:
-            import sys
-            print(f"User:      {args.prompt}")
-            print(f"Assistant: ", end="", flush=True)
-            for chunk in agent.chat_stream(args.prompt):
-                print(chunk, end="", flush=True)
-            print()
-        else:
-            response = agent.chat(args.prompt)
-            print(f"User:      {args.prompt}")
-            print(f"Assistant: {response}")
+        print(f"User:      {args.prompt}")
+        print(f"Assistant: ", end="", flush=True)
+        for chunk in agent.chat_stream(args.prompt):
+            print(chunk, end="", flush=True)
+        print()
         print(f"\nSession hash: {agent.get_session_hash()}")
         if args.export:
             session_hash = agent.export_session(args.export)
@@ -311,15 +376,10 @@ def cmd_agent(args: argparse.Namespace) -> None:
             if not user_input:
                 continue
 
-            if args.stream:
-                import sys
-                print("Assistant: ", end="", flush=True)
-                for chunk in agent.chat_stream(user_input):
-                    print(chunk, end="", flush=True)
-                print("\n")
-            else:
-                response = agent.chat(user_input)
-                print(f"Assistant: {response}\n")
+            print("Assistant: ", end="", flush=True)
+            for chunk in agent.chat_stream(user_input):
+                print(chunk, end="", flush=True)
+            print("\n")
 
     except (KeyboardInterrupt, EOFError):
         print(f"\n\nSession: {agent.turn_count} turns")
@@ -495,7 +555,6 @@ def main() -> None:
     agent_parser.add_argument("--system", default=None, help="System prompt (e.g., 'You are a math tutor')")
     agent_parser.add_argument("--quantize", default=None, choices=["int8"], help="Quantization mode (experimental)")
     agent_parser.add_argument("--verbose-trace", action="store_true", help="Record top-k tokens per step")
-    agent_parser.add_argument("--stream", action="store_true", help="Stream tokens as they are generated")
 
     # -- detinfer replay <session.json> --
     replay_parser = subparsers.add_parser("replay", help="Replay and verify a saved session")
