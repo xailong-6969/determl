@@ -389,6 +389,15 @@ class DeterministicAgent:
         gen_trace.finalize(eos_token_id=eos_id)
         self.session.add_generation(gen_trace)
 
+        # Record agent step for this LLM generation (matches chat() behavior)
+        self._agent_step_counter += 1
+        self.session.add_agent_step(AgentStep(
+            step=self._agent_step_counter,
+            type="llm_generation",
+            turn=self._turn_count,
+            generation_turn=self._turn_count,
+        ))
+
         # Decode full response
         response = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
         self._conversation_history.append({"role": "assistant", "content": response})

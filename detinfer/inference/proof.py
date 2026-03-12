@@ -69,10 +69,14 @@ class InferenceProof:
     @classmethod
     def load(cls, path: str | Path) -> "InferenceProof":
         """Load proof from a JSON file."""
+        import dataclasses
         path = Path(path)
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return cls(**data)
+        # Only pass fields that exist in the dataclass (handles old + future JSONs)
+        known = {f.name for f in dataclasses.fields(cls)}
+        filtered = {k: v for k, v in data.items() if k in known}
+        return cls(**filtered)
 
     def __str__(self) -> str:
         lines = [

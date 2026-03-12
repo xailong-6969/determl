@@ -334,16 +334,23 @@ Exported sessions contain:
 ```json
 {
   "schema_version": "1",
+  "trace_type": "agent",
+  "trace_mode": "standard",
   "model": "gpt2",
   "seed": 42,
+  "session_hash": "a1b2c3...",
   "messages": [
     {"role": "user", "content": "What is 2+2?"},
     {"role": "assistant", "content": "2+2 equals 4."}
   ],
   "generations": [
     {
+      "turn": 1,
+      "prompt_hash": "abc...",
       "input_tokens": [464, 318],
       "output_tokens": [17, 10],
+      "output_tokens_hash": "def...",
+      "stop_reason": "eos",
       "steps": [
         {"step": 0, "chosen_token": 17},
         {"step": 1, "chosen_token": 10}
@@ -491,6 +498,7 @@ Mismatch types:
 
 | Type | Severity | Meaning |
 |------|----------|---------|
+| `SCHEMA_MISMATCH` | error | Schema version changed |
 | `TYPE_MISMATCH` | error | Comparing inference vs agent trace |
 | `MODEL_DRIFT` | error | Model name or weights changed |
 | `TOKENIZER_DRIFT` | error | Tokenizer or chat template changed |
