@@ -108,18 +108,18 @@ class TestGenerationTrace:
 
 class TestSessionTrace:
     def test_add_message(self):
-        session = SessionTrace(model="gpt2", seed=42)
+        session = SessionTrace(model="test-model", seed=42)
         session.add_message("user", "Hello")
         session.add_message("assistant", "Hi there")
         assert len(session.messages) == 2
         assert session.messages[0]["role"] == "user"
 
     def test_session_hash_deterministic(self):
-        s1 = SessionTrace(model="gpt2", seed=42)
+        s1 = SessionTrace(model="test-model", seed=42)
         s1.add_message("user", "Hello")
         h1 = s1.compute_session_hash()
 
-        s2 = SessionTrace(model="gpt2", seed=42)
+        s2 = SessionTrace(model="test-model", seed=42)
         s2.add_message("user", "Hello")
         h2 = s2.compute_session_hash()
 
@@ -127,18 +127,18 @@ class TestSessionTrace:
         assert len(h1) == 64  # SHA-256 hex
 
     def test_session_hash_changes_with_content(self):
-        s1 = SessionTrace(model="gpt2", seed=42)
+        s1 = SessionTrace(model="test-model", seed=42)
         s1.add_message("user", "Hello")
         h1 = s1.compute_session_hash()
 
-        s2 = SessionTrace(model="gpt2", seed=42)
+        s2 = SessionTrace(model="test-model", seed=42)
         s2.add_message("user", "Goodbye")
         h2 = s2.compute_session_hash()
 
         assert h1 != h2
 
     def test_export_import_roundtrip(self):
-        session = SessionTrace(model="gpt2", seed=42, trace_mode=TraceMode.STANDARD)
+        session = SessionTrace(model="test-model", seed=42, trace_mode=TraceMode.STANDARD)
         session.add_message("user", "What is 2+2?")
         session.add_message("assistant", "4")
 
@@ -159,7 +159,7 @@ class TestSessionTrace:
 
             # Reload
             loaded = SessionTrace.from_json(path)
-            assert loaded.model == "gpt2"
+            assert loaded.model == "test-model"
             assert loaded.seed == 42
             assert len(loaded.messages) == 2
             assert len(loaded.generations) == 1
@@ -176,7 +176,7 @@ class TestSessionTrace:
     def test_canonical_hash_independent_of_trace_mode(self):
         """Critical invariant: same run, different trace modes, same hash."""
         def make_session(mode: TraceMode) -> SessionTrace:
-            s = SessionTrace(model="gpt2", seed=42, trace_mode=mode)
+            s = SessionTrace(model="test-model", seed=42, trace_mode=mode)
             s.add_message("user", "test")
             gen = GenerationTrace(turn=1, rendered_prompt="test")
             gen.input_tokens = [1, 2, 3]
@@ -230,7 +230,7 @@ class TestHashing:
 
 class TestDiff:
     def _make_session(self, tokens: list[int]) -> str:
-        session = SessionTrace(model="gpt2", seed=42)
+        session = SessionTrace(model="test-model", seed=42)
         session.add_message("user", "test")
         session.add_message("assistant", "response")
         gen = GenerationTrace(turn=1)
@@ -351,7 +351,7 @@ class TestAgentStepRecording:
 class TestSessionSaveResume:
     def test_save_state_roundtrip(self):
         """Test that save_state/load_state preserves conversation history."""
-        session = SessionTrace(model="gpt2", seed=42, trace_mode=TraceMode.STANDARD)
+        session = SessionTrace(model="test-model", seed=42, trace_mode=TraceMode.STANDARD)
         session.add_message("user", "Hello")
         session.add_message("assistant", "Hi there")
 
@@ -364,7 +364,7 @@ class TestSessionSaveResume:
         state = {
             "version": 1,
             "agent_config": {
-                "model_name": "gpt2",
+                "model_name": "test-model",
                 "seed": 42,
                 "max_new_tokens": 256,
                 "trace_mode": "standard",
@@ -392,18 +392,18 @@ class TestSessionSaveResume:
             loaded_state = json.loads(open(path).read())
             assert loaded_state["turn_count"] == 1
             assert len(loaded_state["conversation_history"]) == 2
-            assert loaded_state["agent_config"]["model_name"] == "gpt2"
+            assert loaded_state["agent_config"]["model_name"] == "test-model"
 
             # Verify session trace roundtrip
             loaded_session = SessionTrace.from_dict(loaded_state["session_trace"])
-            assert loaded_session.model == "gpt2"
+            assert loaded_session.model == "test-model"
             assert len(loaded_session.generations) == 1
         finally:
             os.unlink(path)
 
     def test_gzip_session_roundtrip(self):
         """Test gzip export/import roundtrip."""
-        session = SessionTrace(model="gpt2", seed=42)
+        session = SessionTrace(model="test-model", seed=42)
         session.add_message("user", "test")
         gen = GenerationTrace(turn=1)
         gen.output_tokens = [5, 10]
@@ -416,7 +416,7 @@ class TestSessionSaveResume:
         try:
             session.export_json(path)
             loaded = SessionTrace.from_json(path)
-            assert loaded.model == "gpt2"
+            assert loaded.model == "test-model"
             assert loaded.generations[0].output_tokens == [5, 10]
             assert loaded.session_hash == session.session_hash
         finally:

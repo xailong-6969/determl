@@ -90,7 +90,7 @@ pip install --upgrade detinfer
 ### Quick Reference — All CLI Commands
 
 ```bash
-# Replace <model> with any HuggingFace model, e.g. gpt2, Qwen/Qwen2.5-0.5B-Instruct
+# Replace <model> with any HuggingFace model name
 
 # ══════════════════════════════════════
 # INFERENCE
@@ -175,7 +175,7 @@ from detinfer import DeterministicEngine
 
 # Load any HuggingFace model + apply deterministic runtime settings
 engine = DeterministicEngine(seed=42)
-engine.load("<model>")  # e.g., "Qwen/Qwen2.5-0.5B-Instruct", "gpt2"
+engine.load("<model>")  # Any HuggingFace CausalLM model
 
 # Run inference under deterministic settings
 result = engine.run("Write hello world in Python")
@@ -269,13 +269,13 @@ Both `chat()` and `chat_stream()` use manual token-by-token generation with dete
 from detinfer import DeterministicAgent
 
 # Multi-turn deterministic agent (works with any HuggingFace model)
-agent = DeterministicAgent("Qwen/Qwen2.5-0.5B-Instruct", seed=42)
+agent = DeterministicAgent("<model>", seed=42)
 response = agent.chat("What is 2+2?")
 print(response)
 
 # With system prompt
 agent = DeterministicAgent(
-    "Qwen/Qwen2.5-0.5B-Instruct",
+    "<model>",
     seed=42,
     system_prompt="You are a math tutor"
 )
@@ -296,7 +296,7 @@ Register tools and call them — every call is recorded in the trace for replay 
 ```python
 from detinfer import DeterministicAgent
 
-agent = DeterministicAgent("TinyLlama/TinyLlama-1.1B-Chat-v1.0", seed=42)
+agent = DeterministicAgent("<model>", seed=42)
 
 # Register tools (only name + callable, never serialized)
 agent.register_tool("calculator", lambda expression: str(eval(expression)))
@@ -347,7 +347,7 @@ Exported sessions contain:
   "schema_version": "1",
   "trace_type": "agent",
   "trace_mode": "standard",
-  "model": "gpt2",
+  "model": "<model>",
   "seed": 42,
   "session_hash": "a1b2c3...",
   "messages": [
@@ -399,7 +399,7 @@ When conversations exceed the context window, detinfer uses a deterministic trun
 
 ```python
 agent = DeterministicAgent(
-    "gpt2", seed=42,
+    "<model>", seed=42,
     max_context_tokens=2048  # Truncate when prompt exceeds 2048 tokens
 )
 ```
@@ -466,7 +466,7 @@ detinfer verify-session session.json
     DETERMINISTIC EXECUTION PROOF VERIFICATION
   ══════════════════════════════════════════════════════════════
 
-    Model:        gpt2
+    Model:        <model>
     Seed:         42
     Turns:        3
 
@@ -534,7 +534,7 @@ Task file (`task.json`):
 ```json
 {
   "name": "basic_math",
-  "model": "gpt2",
+  "model": "<hf-model>",
   "seed": 42,
   "prompt": "What is 2+2?",
   "max_turns": 1,

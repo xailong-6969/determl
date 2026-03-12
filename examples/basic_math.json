@@ -1,7 +1,7 @@
 {
   "name": "basic_math",
   "description": "Smoke test: simple arithmetic",
-  "model": "gpt2",
+  "model": "<hf-model>",
   "seed": 42,
   "prompt": "What is 2+2?",
   "max_turns": 1,

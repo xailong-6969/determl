@@ -98,7 +98,7 @@ class TestTaskDefinition:
     def test_from_dict_full(self):
         data = {
             "name": "test_task",
-            "model": "gpt2",
+            "model": "test-model",
             "seed": 99,
             "prompt": "Hello",
             "system_prompt": "Be nice",
@@ -114,7 +114,7 @@ class TestTaskDefinition:
         }
         task = TaskDefinition.from_dict(data)
         assert task.name == "test_task"
-        assert task.model == "gpt2"
+        assert task.model == "test-model"
         assert task.seed == 99
         assert task.prompt == "Hello"
         assert task.system_prompt == "Be nice"
@@ -131,7 +131,6 @@ class TestTaskDefinition:
     def test_from_dict_defaults(self):
         data = {"name": "minimal", "prompt": "Hi"}
         task = TaskDefinition.from_dict(data)
-        assert task.model == "gpt2"
         assert task.seed == 42
         assert task.max_turns == 1
         assert task.max_tokens == 256
@@ -142,7 +141,7 @@ class TestTaskDefinition:
     def test_to_dict_roundtrip(self):
         data = {
             "name": "roundtrip",
-            "model": "gpt2",
+            "model": "test-model",
             "seed": 42,
             "prompt": "Hello",
             "max_turns": 1,
@@ -160,7 +159,7 @@ class TestTaskDefinition:
         assert d["generation_config"]["do_sample"] is False
 
     def test_validate_ok(self):
-        task = TaskDefinition(name="ok", prompt="Hi", model="gpt2")
+        task = TaskDefinition(name="ok", prompt="Hi", model="test-model")
         assert task.validate() == []
 
     def test_validate_missing_name(self):
@@ -194,6 +193,11 @@ class TestTaskDefinition:
         errors = task.validate()
         assert any("max_turns" in e.lower() for e in errors)
 
+    def test_validate_missing_model(self):
+        task = TaskDefinition(name="test", prompt="Hi", model="")
+        errors = task.validate()
+        assert any("model" in e.lower() for e in errors)
+
 
 class TestLoadTask:
     def test_load_valid_task(self, tmp_path):
@@ -201,7 +205,7 @@ class TestLoadTask:
         task_file.write_text(json.dumps({
             "name": "test",
             "prompt": "Hello",
-            "model": "gpt2",
+            "model": "test-model",
         }))
         task = load_task(str(task_file))
         assert task.name == "test"
@@ -209,7 +213,7 @@ class TestLoadTask:
 
     def test_load_auto_name(self, tmp_path):
         task_file = tmp_path / "my_task.json"
-        task_file.write_text(json.dumps({"prompt": "Hello", "model": "gpt2"}))
+        task_file.write_text(json.dumps({"prompt": "Hello", "model": "test-model"}))
         task = load_task(str(task_file))
         assert task.name == "my_task"
 
@@ -230,7 +234,7 @@ class TestLoadTaskSuite:
             (tmp_path / f"task_{i}.json").write_text(json.dumps({
                 "name": f"task_{i}",
                 "prompt": f"Hello {i}",
-                "model": "gpt2",
+                "model": "test-model",
             }))
         tasks = load_task_suite(str(tmp_path))
         assert len(tasks) == 3
@@ -238,7 +242,7 @@ class TestLoadTaskSuite:
 
     def test_load_suite_skips_invalid(self, tmp_path):
         (tmp_path / "good.json").write_text(json.dumps({
-            "name": "good", "prompt": "Hi", "model": "gpt2",
+            "name": "good", "prompt": "Hi", "model": "test-model",
         }))
         (tmp_path / "bad.json").write_text(json.dumps({"name": "bad"}))
         tasks = load_task_suite(str(tmp_path))
@@ -321,7 +325,7 @@ def _make_mock_agent():
     session.to_dict.return_value = {
         "schema_version": "1",
         "trace_type": "agent",
-        "model": "gpt2",
+        "model": "test-model",
         "seed": 42,
         "session_hash": "fakehash123",
         "generation_config": {},

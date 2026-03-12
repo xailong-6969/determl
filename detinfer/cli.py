@@ -894,7 +894,7 @@ def main() -> None:
 
     # -- detinfer scan <model> --
     scan_parser = subparsers.add_parser("scan", help="Scan model for non-deterministic ops")
-    scan_parser.add_argument("model", help="HuggingFace model name (e.g., Qwen/Qwen2.5-Coder-0.5B-Instruct)")
+    scan_parser.add_argument("model", help="HuggingFace model name (e.g., owner/model-name)")
     scan_parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     scan_parser.add_argument("--device", default=None, help="Device (cpu/cuda, default: auto)")
 

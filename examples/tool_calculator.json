@@ -1,7 +1,7 @@
 {
   "name": "tool_calculator",
   "description": "Tool-usage: mock calculator tool",
-  "model": "gpt2",
+  "model": "<hf-model>",
   "seed": 42,
   "prompt": "Use the calculator tool to compute 5 * 3 and explain the result.",
   "tools": [

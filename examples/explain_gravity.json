@@ -1,7 +1,7 @@
 {
   "name": "explain_gravity",
   "description": "Medium: explanation with system prompt",
-  "model": "gpt2",
+  "model": "<hf-model>",
   "seed": 42,
   "system_prompt": "You are a science teacher.",
   "prompt": "Explain gravity in two sentences.",

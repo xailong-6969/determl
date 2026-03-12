@@ -1,7 +1,7 @@
 {
   "name": "python_function",
   "description": "Medium: code generation determinism",
-  "model": "gpt2",
+  "model": "<hf-model>",
   "seed": 42,
   "prompt": "Write a Python function called square that returns the square of a number.",
   "max_turns": 1,

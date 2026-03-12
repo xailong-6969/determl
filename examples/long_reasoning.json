@@ -1,7 +1,7 @@
 {
   "name": "long_reasoning",
   "description": "Stress: longer generation with explanation",
-  "model": "gpt2",
+  "model": "<hf-model>",
   "seed": 42,
   "prompt": "Explain how photosynthesis works in simple terms.",
   "max_turns": 1,

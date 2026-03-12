@@ -87,13 +87,13 @@ fi
 # ============================================================================
 echo ""
 echo -en "${GREEN}>> Enter the model name in huggingface repo/name format"
-echo -en " (e.g., Qwen/Qwen2.5-Coder-0.5B-Instruct),"
+echo -en " (e.g., owner/model-name),"
 echo -e  " or press [Enter] for default:${RESET}"
 read -p "> " MODEL_NAME
 
 if [ -z "$MODEL_NAME" ]; then
-    MODEL_NAME="Qwen/Qwen2.5-Coder-0.5B-Instruct"
-    echo_green ">> Using default model: $MODEL_NAME"
+    echo_green ">> No model specified. Please provide a HuggingFace model name."
+    exit 1
 else
     echo_green ">> Using model: $MODEL_NAME"
 fi

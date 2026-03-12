@@ -12,7 +12,7 @@ Usage:
     from detinfer import DeterministicEngine
 
     engine = DeterministicEngine(seed=42)
-    engine.load("Qwen/Qwen2.5-Coder-0.5B-Instruct")
+    engine.load("<hf-model>")
 
     result = engine.run("Write hello world in Python")
     print(result.text)
@@ -110,7 +110,7 @@ class DeterministicEngine:
 
     Usage with model name:
         engine = DeterministicEngine(seed=42)
-        engine.load("Qwen/Qwen2.5-Coder-0.5B-Instruct")
+        engine.load("<hf-model>")
         result = engine.run("Write hello world")
 
     Usage with pre-loaded model:
@@ -176,7 +176,7 @@ class DeterministicEngine:
         """Load a HuggingFace model by name and enforce determinism.
 
         Args:
-            model_name: HuggingFace model ID (e.g., "Qwen/Qwen2.5-Coder-0.5B-Instruct").
+            model_name: HuggingFace model ID (e.g., "owner/model-name").
             torch_dtype: Data type for model loading.
             device_map: Device placement strategy for multi-GPU.
                         Use "auto" to split across all available GPUs.

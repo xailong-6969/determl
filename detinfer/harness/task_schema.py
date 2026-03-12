@@ -7,7 +7,7 @@ for single tasks and task suites (directories).
 Example task.json:
     {
       "name": "basic_math",
-      "model": "gpt2",
+      "model": "<hf-model>",
       "seed": 42,
       "prompt": "What is 2+2?",
       "max_turns": 1,
@@ -120,7 +120,7 @@ class TaskDefinition:
     expected output.
     """
     name: str
-    model: str = "gpt2"
+    model: str = ""
     seed: int = 42
     prompt: str = ""
     system_prompt: str | None = None
@@ -162,7 +162,7 @@ class TaskDefinition:
 
         return cls(
             name=data.get("name", "unnamed"),
-            model=data.get("model", "gpt2"),
+            model=data.get("model", ""),
             seed=data.get("seed", 42),
             prompt=data.get("prompt", ""),
             system_prompt=data.get("system_prompt"),

@@ -23,7 +23,7 @@ from detinfer.check import (
 # ---------------------------------------------------------------------------
 
 def _make_session(
-    model="gpt2",
+    model="test-model",
     model_hash="abc123",
     seed=42,
     tokenizer_hash="tok_abc",
@@ -116,8 +116,8 @@ class TestIdenticalSessions:
 
 class TestModelDrift:
     def test_model_name_changed(self):
-        a = _make_session(model="gpt2")
-        b = _make_session(model="gpt2-large")
+        a = _make_session(model="test-model")
+        b = _make_session(model="test-model-v2")
         report = check_sessions(a, b)
         assert report.status == "failed"
         assert report.primary_type == "MODEL_DRIFT"
