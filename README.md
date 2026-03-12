@@ -4,7 +4,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-115%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-162%20passed-brightgreen.svg)]()
 [![PyPI](https://img.shields.io/badge/pypi-v0.2.3-blue.svg)](https://pypi.org/project/detinfer/)
 
 ---
@@ -134,6 +134,17 @@ detinfer check baseline.json candidate.json         # Compare traces for regress
 detinfer check baseline.json candidate.json --json  # JSON output for CI
 detinfer check a.json b.json --fail-on OUTPUT_DRIFT # Fail on specific drift type
 detinfer check a.json b.json --allow ENVIRONMENT_DRIFT  # Ignore env differences
+
+# ══════════════════════════════════════
+# AGENT HARNESS
+# ══════════════════════════════════════
+
+detinfer agent-run task.json                        # Run a single harness task
+detinfer agent-run examples/                        # Run a suite of tasks
+detinfer agent-run task.json --against baseline.json # Compare against baseline
+detinfer agent-run examples/ --output-dir runs/     # Export traces per task
+detinfer agent-run examples/ --json                 # JSON output for CI
+detinfer agent-run examples/ --fail-fast            # Stop on first failure
 
 # ══════════════════════════════════════
 # INFO
@@ -510,6 +521,87 @@ Mismatch types:
 | `ENVIRONMENT_DRIFT` | warning | Torch/Python version changed |
 | `TRACE_DETAIL_DRIFT` | info | Verbose-only fields differ |
 
+### Agent Harness
+
+Automated harness that loads task definitions, runs the agent loop, collects results, and exports traces.
+
+```bash
+detinfer agent-run task.json
+```
+
+Task file (`task.json`):
+
+```json
+{
+  "name": "basic_math",
+  "model": "gpt2",
+  "seed": 42,
+  "prompt": "What is 2+2?",
+  "max_turns": 1,
+  "generation_config": {
+    "max_new_tokens": 64,
+    "do_sample": false
+  },
+  "tools": [
+    {"name": "calculator", "mock_result": "4"}
+  ],
+  "expected": {
+    "match": "contains",
+    "value": "4"
+  }
+}
+```
+
+Compare against a known-good baseline:
+
+```bash
+detinfer agent-run task.json --against baseline.json
+```
+
+Run a suite of tasks:
+
+```bash
+detinfer agent-run examples/ --output-dir runs/
+```
+
+Output:
+
+```
+Agent Harness Report
+====================
+
+  ✓ basic_math (42ms)
+  ✓ python_function (85ms)
+  ✓ explain_gravity (71ms)
+
+Total: 3  |  Passed: 3  |  Failed: 0  |  Errors: 0
+Duration: 198ms
+Manifest: runs/manifest.json
+```
+
+The harness uses the **same SessionTrace format** as `chat()` — all `replay`, `diff`, and `check` tools work on harness traces.
+
+Expected match modes:
+
+| Mode | Behavior |
+|------|----------|
+| `exact` | Output must equal value exactly |
+| `contains` | Output must contain value as substring |
+| `regex` | Output must match regex pattern |
+
+#### Example Tasks
+
+The repo includes example tasks in `examples/`:
+
+| File | Type | Tests |
+|------|------|-------|
+| `basic_math.json` | Smoke | Simple arithmetic |
+| `python_function.json` | Medium | Code generation |
+| `explain_gravity.json` | Medium | Explanation + system prompt |
+| `tool_calculator.json` | Tool | Mock tool usage |
+| `long_reasoning.json` | Stress | Long generation + regex match |
+| `multi_turn_math.json` | Stress | Multi-turn with follow-ups |
+
 ---
 
 ## CLI Reference
@@ -537,6 +629,15 @@ Mismatch types:
 | `--json` | off | Output report as JSON |
 | `--fail-on` | — | Mismatch type that should fail (repeatable) |
 | `--allow` | — | Mismatch type to ignore (repeatable) |
+
+### `detinfer agent-run`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--output-dir` | — | Directory for trace output files |
+| `--against` | — | Baseline trace to compare against |
+| `--json` | off | Output report as JSON |
+| `--fail-fast` | off | Stop suite on first failure |
 
 ### `detinfer verify-session`
 
@@ -582,7 +683,7 @@ detinfer applies deterministic runtime settings for 7 sources of non-determinism
 ```
 detinfer/
   __init__.py       # Top-level API: enforce(), status(), checkpoint_hash()
-  cli.py            # CLI entry point (15 commands)
+  cli.py            # CLI entry point (16 commands)
   check.py          # Regression check: compare two traces, classify drift
 
   inference/        # Deterministic inference library
@@ -602,6 +703,18 @@ detinfer/
     runtime.py      # DeterministicAgent — multi-turn with truncation + save/resume
     trace.py        # Token-level trace recording + session schema + trace modes
     replay.py       # Session replay verification + diff
+
+  harness/          # Agent harness for automated task execution
+    task_schema.py  # Task definition loading + validation
+    runner.py       # HarnessRunner — task/suite execution + baseline comparison
+
+examples/           # Example harness task files
+  basic_math.json
+  python_function.json
+  explain_gravity.json
+  tool_calculator.json
+  long_reasoning.json
+  multi_turn_math.json
 ```
 
 ---
@@ -650,6 +763,16 @@ detinfer.checkpoint_hash(model)         # Hash model weights (for training)
 |----------|-------------|
 | `check_sessions(baseline, candidate)` | Compare two trace dicts, classify mismatches |
 | `render_check_report(report)` | Human-readable regression report |
+
+### Agent Harness
+
+| Function | Description |
+|----------|-------------|
+| `HarnessRunner(output_dir, against)` | Create harness runner |
+| `runner.run_task(task)` | Run a single task, return `TaskResult` |
+| `runner.run_suite(tasks)` | Run a suite, return `SuiteResult` |
+| `load_task(path)` | Load a task definition from JSON |
+| `load_task_suite(dir_path)` | Load all tasks from a directory |
 
 ### Replay & Diff
 

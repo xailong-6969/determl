@@ -843,6 +843,45 @@ def cmd_check(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_agent_run(args: argparse.Namespace) -> None:
+    """Run agent harness tasks."""
+    from pathlib import Path
+    from detinfer.harness import (
+        HarnessRunner, load_task, load_task_suite,
+        render_task_result, render_suite_result,
+    )
+
+    target = Path(args.task)
+    runner = HarnessRunner(
+        output_dir=args.output_dir,
+        against=args.against,
+    )
+
+    if target.is_dir():
+        # Suite mode
+        tasks = load_task_suite(str(target))
+        if not tasks:
+            print("No valid task files found.")
+            sys.exit(1)
+        suite = runner.run_suite(tasks, fail_fast=args.fail_fast)
+        if args.json_output:
+            print(json.dumps(suite.to_dict(), indent=2))
+        else:
+            print(render_suite_result(suite))
+        if suite.failed > 0:
+            sys.exit(1)
+    else:
+        # Single task mode
+        task = load_task(str(target))
+        result = runner.run_task(task)
+        if args.json_output:
+            print(json.dumps(result.to_dict(), indent=2))
+        else:
+            print(render_task_result(result))
+        if not result.passed:
+            sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="detinfer",
@@ -967,6 +1006,18 @@ def main() -> None:
     check_parser.add_argument("--allow", action="append", default=[],
                               help="Mismatch type to ignore (e.g. ENVIRONMENT_DRIFT)")
 
+    # -- detinfer agent-run <task> --
+    agent_run_parser = subparsers.add_parser("agent-run", help="Run agent harness tasks")
+    agent_run_parser.add_argument("task", help="Task JSON file or directory of tasks")
+    agent_run_parser.add_argument("--output-dir", default=None,
+                                  help="Directory for trace output files")
+    agent_run_parser.add_argument("--against", default=None,
+                                  help="Baseline trace to compare against")
+    agent_run_parser.add_argument("--json", action="store_true", dest="json_output",
+                                  help="Output report as JSON")
+    agent_run_parser.add_argument("--fail-fast", action="store_true",
+                                  help="Stop suite on first failure")
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -988,6 +1039,7 @@ def main() -> None:
         "verify-session": cmd_verify_session,
         "doctor": cmd_doctor,
         "check": cmd_check,
+        "agent-run": cmd_agent_run,
     }
 
     handlers[args.command](args)
