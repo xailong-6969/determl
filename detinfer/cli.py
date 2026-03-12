@@ -811,6 +811,7 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 
 def cmd_check(args: argparse.Namespace) -> None:
     """Compare two session traces for regression."""
+    import json
     import gzip
     from detinfer.check import check_sessions, render_check_report
 
