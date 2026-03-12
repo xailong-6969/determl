@@ -48,12 +48,7 @@ pip install "detinfer[quantized]"
 ### 3) Optional source install (for development)
 
 ```bash
-# Full clone
 git clone https://github.com/xailong-6969/detinfer.git
-cd detinfer
-
-# Or single branch clone
-git clone --single-branch --branch v2-enforcement https://github.com/xailong-6969/detinfer.git
 cd detinfer
 
 pip install -e ".[dev]"
@@ -185,6 +180,7 @@ INT8 bitsandbytes is experimental. GPTQ/AWQ/GGUF are out of scope in this repo.
 
 ### Is this only for inference?
 Primary focus is deterministic inference and agent replay. Training support is utility-level, not framework-level.
+
 
 
 

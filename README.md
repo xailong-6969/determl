@@ -87,17 +87,10 @@ Requirements:
 
 Use this if you want to develop locally or modify the codebase.
 
-### Method A: Full clone
+### Clone repository
 
 ```bash
 git clone https://github.com/xailong-6969/detinfer.git
-cd detinfer
-```
-
-### Method B: Single-branch clone (faster)
-
-```bash
-git clone --single-branch --branch v2-enforcement https://github.com/xailong-6969/detinfer.git
 cd detinfer
 ```
 
@@ -275,6 +268,7 @@ pytest tests/ -v
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
 
 
 
