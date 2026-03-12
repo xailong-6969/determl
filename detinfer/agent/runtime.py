@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import torch
@@ -55,6 +56,34 @@ def deterministic_argmax(logits: torch.Tensor) -> int:
     return int(candidates.min().item())
 
 
+@dataclass
+class TruncationPolicy:
+    """Deterministic truncation policy for long conversations.
+
+    When the rendered prompt exceeds max_context_tokens, this policy
+    defines exactly which messages to drop.  The algorithm is fully
+    deterministic: same history + same policy = same truncation.
+
+    Rules (applied in order):
+        1. System prompt is ALWAYS kept (never truncated).
+        2. The latest user message is ALWAYS kept.
+        3. Oldest non-system, non-latest-user turns are dropped first.
+        4. Truncation events are recorded in the session trace.
+
+    Args:
+        max_context_tokens: Max tokens for the rendered prompt
+            (default: None = no truncation).
+        preserve_pairs: If True, drop user+assistant pairs
+            together to avoid orphaned messages.
+    """
+    max_context_tokens: int | None = None
+    preserve_pairs: bool = True
+
+    @property
+    def enabled(self) -> bool:
+        return self.max_context_tokens is not None
+
+
 class DeterministicAgent:
     """Multi-turn deterministic agent with full tracing.
 
@@ -63,8 +92,10 @@ class DeterministicAgent:
     - Token-level trace recording per turn
     - Prompt snapshotting (rendered_prompt + hash per turn)
     - Tool registration and call tracing
+    - Deterministic truncation policy for long conversations
     - Re-seeding before each generation
     - Session export with full trace for replay/verification
+    - Session save/resume via checkpoint files
 
     Usage:
         agent = DeterministicAgent("<model>", seed=42)  # any HuggingFace model
@@ -82,6 +113,7 @@ class DeterministicAgent:
         quantize: str | None = None,
         device: str | None = None,
         system_prompt: str | None = None,
+        max_context_tokens: int | None = None,
     ):
         """Initialize the deterministic agent.
 
@@ -93,6 +125,7 @@ class DeterministicAgent:
             quantize: Quantization mode (None or "int8", experimental).
             device: Device to use (auto-detected if None).
             system_prompt: Optional system prompt (e.g., "You are a math tutor").
+            max_context_tokens: Max prompt tokens before truncation (None = no limit).
         """
         self.model_name = model_name
         self.seed = seed
@@ -100,6 +133,7 @@ class DeterministicAgent:
         self.trace_mode = TraceMode(trace_mode) if isinstance(trace_mode, str) else trace_mode
         self.quantize = quantize
         self.system_prompt = system_prompt
+        self.truncation = TruncationPolicy(max_context_tokens=max_context_tokens)
 
         # Initialize engine
         self.engine = DeterministicEngine(seed=seed, device=device)
@@ -168,7 +202,8 @@ class DeterministicAgent:
         # Re-seed for strict reproducibility
         self.engine.config.apply()
 
-        # Render prompt using chat template or plain history
+        # Truncate if needed, then render prompt
+        self._truncate_history()
         rendered_prompt = self._render_prompt()
 
         # Tokenize
@@ -280,7 +315,8 @@ class DeterministicAgent:
         # Re-seed for strict reproducibility
         self.engine.config.apply()
 
-        # Render prompt and tokenize
+        # Truncate if needed, then render
+        self._truncate_history()
         rendered_prompt = self._render_prompt()
         input_device = self.engine._get_input_device()
         inputs = self.engine.tokenizer(
@@ -357,27 +393,133 @@ class DeterministicAgent:
         self._conversation_history.append({"role": "assistant", "content": response})
         self.session.add_message("assistant", response)
 
-    def _render_prompt(self) -> str:
-        """Render the full conversation into a prompt string.
+    def _truncate_history(self) -> None:
+        """Apply deterministic truncation to conversation history.
 
-        Uses chat template if available, otherwise raw concatenation.
-        System prompt is included at the start of the conversation.
+        Algorithm (fully deterministic):
+            1. If max_context_tokens is None, do nothing.
+            2. Render the current history into a prompt string.
+            3. If token count <= budget, do nothing.
+            4. Otherwise, drop oldest non-protected messages one at a time
+               until within budget. Protected = system prompt + latest user message.
+            5. Record truncation event as an AgentStep in the trace.
         """
-        tokenizer = self.engine.tokenizer
+        if not self.truncation.enabled:
+            return
 
+        tokenizer = self.engine.tokenizer
+        budget = self.truncation.max_context_tokens
+
+        # Quick check: render current history and count tokens
+        rendered = self._render_prompt()
+        token_count = len(tokenizer.encode(rendered))
+        if token_count <= budget:
+            return
+
+        # Build drop candidates: indices of messages we CAN drop
+        # Never drop: system prompt (index 0 if present) or last user message
+        last_user_idx = None
+        for i in range(len(self._conversation_history) - 1, -1, -1):
+            if self._conversation_history[i]["role"] == "user":
+                last_user_idx = i
+                break
+
+        droppable = []
+        for i, msg in enumerate(self._conversation_history):
+            if msg["role"] == "system":
+                continue  # protect system prompt
+            if i == last_user_idx:
+                continue  # protect latest user message
+            droppable.append(i)
+
+        # Drop oldest first (smallest index first = most deterministic)
+        dropped_count = 0
+        original_len = len(self._conversation_history)
+
+        if self.truncation.preserve_pairs:
+            # Drop user+assistant pairs together
+            # Build pairs: [(user_idx, assistant_idx), ...]
+            pairs = []
+            i = 0
+            while i < len(droppable) - 1:
+                idx_a = droppable[i]
+                idx_b = droppable[i + 1]
+                msg_a = self._conversation_history[idx_a]
+                msg_b = self._conversation_history[idx_b]
+                if msg_a["role"] == "user" and msg_b["role"] == "assistant":
+                    pairs.append((idx_a, idx_b))
+                    i += 2
+                else:
+                    pairs.append((idx_a,))
+                    i += 1
+            if i < len(droppable):
+                pairs.append((droppable[i],))
+
+            # Drop pairs oldest-first
+            indices_to_drop = set()
+            for pair in pairs:
+                indices_to_drop.update(pair)
+                # Rebuild history without dropped indices
+                remaining = [
+                    msg for j, msg in enumerate(self._conversation_history)
+                    if j not in indices_to_drop
+                ]
+                test_prompt = self._render_prompt_from(remaining)
+                if len(tokenizer.encode(test_prompt)) <= budget:
+                    break
+
+            dropped_count = len(indices_to_drop)
+            self._conversation_history = [
+                msg for j, msg in enumerate(self._conversation_history)
+                if j not in indices_to_drop
+            ]
+        else:
+            # Drop individual messages oldest-first
+            indices_to_drop = set()
+            for idx in droppable:
+                indices_to_drop.add(idx)
+                remaining = [
+                    msg for j, msg in enumerate(self._conversation_history)
+                    if j not in indices_to_drop
+                ]
+                test_prompt = self._render_prompt_from(remaining)
+                if len(tokenizer.encode(test_prompt)) <= budget:
+                    break
+
+            dropped_count = len(indices_to_drop)
+            self._conversation_history = [
+                msg for j, msg in enumerate(self._conversation_history)
+                if j not in indices_to_drop
+            ]
+
+        # Record truncation event in trace
+        if dropped_count > 0:
+            self._agent_step_counter += 1
+            self.session.add_agent_step(AgentStep(
+                step=self._agent_step_counter,
+                type="checkpoint",
+                turn=self._turn_count,
+                checkpoint_data={
+                    "event": "truncation",
+                    "messages_before": original_len,
+                    "messages_after": len(self._conversation_history),
+                    "messages_dropped": dropped_count,
+                    "max_context_tokens": budget,
+                },
+            ))
+
+    def _render_prompt_from(self, messages: list[dict]) -> str:
+        """Render a prompt from an arbitrary message list."""
+        tokenizer = self.engine.tokenizer
         if hasattr(tokenizer, "chat_template") and tokenizer.chat_template:
             try:
                 return tokenizer.apply_chat_template(
-                    self._conversation_history,
-                    tokenize=False,
-                    add_generation_prompt=True,
+                    messages, tokenize=False, add_generation_prompt=True,
                 )
             except Exception:
                 pass
-
-        # Fallback: simple concatenation
         parts = []
-        for msg in self._conversation_history:
+        for msg in messages:
             role = msg["role"].capitalize()
             if role == "System":
                 parts.append(f"System: {msg['content']}")
@@ -385,6 +527,14 @@ class DeterministicAgent:
                 parts.append(f"{role}: {msg['content']}")
         parts.append("Assistant:")
         return "\n".join(parts)
+
+    def _render_prompt(self) -> str:
+        """Render the full conversation into a prompt string.
+
+        Uses chat template if available, otherwise raw concatenation.
+        System prompt is included at the start of the conversation.
+        """
+        return self._render_prompt_from(self._conversation_history)
 
     def export_session(self, path: str) -> str:
         """Export the full session trace to JSON.
@@ -401,6 +551,72 @@ class DeterministicAgent:
     def get_session_hash(self) -> str:
         """Compute and return the current session hash."""
         return self.session.compute_session_hash()
+
+    def save_state(self, path: str) -> None:
+        """Save the full agent state for later resume.
+
+        Exports conversation history, session trace, turn counter,
+        and agent config into a single JSON.  Load with load_state().
+
+        Args:
+            path: Output file path (.json or .json.gz).
+        """
+        state = {
+            "version": 1,
+            "agent_config": {
+                "model_name": self.model_name,
+                "seed": self.seed,
+                "max_new_tokens": self.max_new_tokens,
+                "trace_mode": self.trace_mode.value,
+                "quantize": self.quantize,
+                "system_prompt": self.system_prompt,
+                "max_context_tokens": self.truncation.max_context_tokens,
+            },
+            "conversation_history": self._conversation_history,
+            "turn_count": self._turn_count,
+            "agent_step_counter": self._agent_step_counter,
+            "session_trace": self.session.to_dict(),
+        }
+        data = json.dumps(state, indent=2, ensure_ascii=False)
+        if path.endswith(".gz"):
+            import gzip
+            with gzip.open(path, "wt", encoding="utf-8") as f:
+                f.write(data)
+        else:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(data)
+
+    def load_state(self, path: str) -> None:
+        """Resume agent from a saved state file.
+
+        Restores conversation history, session trace, and counters.
+        The model must already be loaded (same model_name).
+
+        Args:
+            path: Path to a state file created by save_state().
+
+        Raises:
+            ValueError: If the state was saved with a different model.
+        """
+        if path.endswith(".gz"):
+            import gzip
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                state = json.load(f)
+        else:
+            with open(path, "r", encoding="utf-8") as f:
+                state = json.load(f)
+
+        config = state["agent_config"]
+        if config["model_name"] != self.model_name:
+            raise ValueError(
+                f"State was saved with model '{config['model_name']}' "
+                f"but this agent is loaded with '{self.model_name}'"
+            )
+
+        self._conversation_history = state["conversation_history"]
+        self._turn_count = state["turn_count"]
+        self._agent_step_counter = state["agent_step_counter"]
+        self.session = SessionTrace.from_dict(state["session_trace"])
 
     @property
     def history(self) -> list[dict]:

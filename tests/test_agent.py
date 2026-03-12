@@ -270,3 +270,154 @@ class TestDiff:
         finally:
             os.unlink(p1)
             os.unlink(p2)
+
+
+# ---------------------------------------------------------------------------
+# TruncationPolicy tests
+# ---------------------------------------------------------------------------
+
+class TestTruncationPolicy:
+    def test_policy_disabled_by_default(self):
+        from detinfer.agent.runtime import TruncationPolicy
+        policy = TruncationPolicy()
+        assert not policy.enabled
+        assert policy.max_context_tokens is None
+
+    def test_policy_enabled(self):
+        from detinfer.agent.runtime import TruncationPolicy
+        policy = TruncationPolicy(max_context_tokens=512)
+        assert policy.enabled
+        assert policy.max_context_tokens == 512
+
+    def test_policy_preserve_pairs_default(self):
+        from detinfer.agent.runtime import TruncationPolicy
+        policy = TruncationPolicy(max_context_tokens=100)
+        assert policy.preserve_pairs is True
+
+
+# ---------------------------------------------------------------------------
+# AgentStep tool call recording tests
+# ---------------------------------------------------------------------------
+
+class TestAgentStepRecording:
+    def test_tool_call_step(self):
+        from detinfer.agent.trace import AgentStep
+        step = AgentStep(
+            step=1, type="tool_call", turn=3,
+            tool="calculator", arguments={"expr": "2+2"},
+        )
+        d = step.to_dict()
+        assert d["type"] == "tool_call"
+        assert d["tool"] == "calculator"
+        assert d["arguments"] == {"expr": "2+2"}
+
+    def test_tool_result_step(self):
+        from detinfer.agent.trace import AgentStep
+        step = AgentStep(
+            step=2, type="tool_result", turn=3,
+            tool="calculator", result="4",
+        )
+        d = step.to_dict()
+        assert d["type"] == "tool_result"
+        assert d["result"] == "4"
+
+    def test_checkpoint_step(self):
+        from detinfer.agent.trace import AgentStep
+        step = AgentStep(
+            step=3, type="checkpoint", turn=3,
+            checkpoint_data={"event": "truncation", "dropped": 2},
+        )
+        d = step.to_dict()
+        assert d["type"] == "checkpoint"
+        assert d["checkpoint_data"]["event"] == "truncation"
+
+    def test_roundtrip(self):
+        from detinfer.agent.trace import AgentStep
+        original = AgentStep(
+            step=5, type="tool_call", turn=2,
+            tool="search", arguments={"q": "hello"},
+        )
+        d = original.to_dict()
+        restored = AgentStep.from_dict(d)
+        assert restored.step == 5
+        assert restored.tool == "search"
+        assert restored.arguments == {"q": "hello"}
+
+
+# ---------------------------------------------------------------------------
+# Session save / resume tests
+# ---------------------------------------------------------------------------
+
+class TestSessionSaveResume:
+    def test_save_state_roundtrip(self):
+        """Test that save_state/load_state preserves conversation history."""
+        session = SessionTrace(model="gpt2", seed=42, trace_mode=TraceMode.STANDARD)
+        session.add_message("user", "Hello")
+        session.add_message("assistant", "Hi there")
+
+        gen = GenerationTrace(turn=1)
+        gen.output_tokens = [10, 20]
+        gen.finalize(eos_token_id=50256)
+        session.add_generation(gen)
+
+        # Simulate save_state structure
+        state = {
+            "version": 1,
+            "agent_config": {
+                "model_name": "gpt2",
+                "seed": 42,
+                "max_new_tokens": 256,
+                "trace_mode": "standard",
+                "quantize": None,
+                "system_prompt": None,
+                "max_context_tokens": None,
+            },
+            "conversation_history": [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there"},
+            ],
+            "turn_count": 1,
+            "agent_step_counter": 1,
+            "session_trace": session.to_dict(),
+        }
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            path = f.name
+            json.dump(state, f, indent=2)
+
+        try:
+            # Load and verify
+            loaded_state = json.loads(open(path).read())
+            assert loaded_state["turn_count"] == 1
+            assert len(loaded_state["conversation_history"]) == 2
+            assert loaded_state["agent_config"]["model_name"] == "gpt2"
+
+            # Verify session trace roundtrip
+            loaded_session = SessionTrace.from_dict(loaded_state["session_trace"])
+            assert loaded_session.model == "gpt2"
+            assert len(loaded_session.generations) == 1
+        finally:
+            os.unlink(path)
+
+    def test_gzip_session_roundtrip(self):
+        """Test gzip export/import roundtrip."""
+        session = SessionTrace(model="gpt2", seed=42)
+        session.add_message("user", "test")
+        gen = GenerationTrace(turn=1)
+        gen.output_tokens = [5, 10]
+        gen.finalize(eos_token_id=50256)
+        session.add_generation(gen)
+
+        with tempfile.NamedTemporaryFile(suffix=".json.gz", delete=False) as f:
+            path = f.name
+
+        try:
+            session.export_json(path)
+            loaded = SessionTrace.from_json(path)
+            assert loaded.model == "gpt2"
+            assert loaded.generations[0].output_tokens == [5, 10]
+            assert loaded.session_hash == session.session_hash
+        finally:
+            os.unlink(path)

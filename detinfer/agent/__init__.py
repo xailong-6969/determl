@@ -5,7 +5,7 @@ Multi-turn deterministic agent with token-level tracing,
 session replay, and diff verification.
 """
 
-from detinfer.agent.runtime import DeterministicAgent, deterministic_argmax
+from detinfer.agent.runtime import DeterministicAgent, TruncationPolicy, deterministic_argmax
 from detinfer.agent.trace import (
     TraceMode,
     GenerationStep,
@@ -26,6 +26,7 @@ from detinfer.agent.replay import (
 
 __all__ = [
     "DeterministicAgent",
+    "TruncationPolicy",
     "deterministic_argmax",
     "TraceMode",
     "GenerationStep",

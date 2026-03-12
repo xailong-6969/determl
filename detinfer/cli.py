@@ -427,7 +427,13 @@ def cmd_agent(args: argparse.Namespace) -> None:
         quantize=args.quantize,
         device=args.device,
         system_prompt=args.system,
+        max_context_tokens=args.max_context_tokens,
     )
+
+    # Resume from saved state if provided
+    if args.load_state:
+        print(f"Resuming from: {args.load_state}")
+        agent.load_state(args.load_state)
 
     print(f"Model loaded. Seed: {args.seed}")
     if args.system:
@@ -445,6 +451,9 @@ def cmd_agent(args: argparse.Namespace) -> None:
         if args.export:
             session_hash = agent.export_session(args.export)
             print(f"Session exported to: {args.export}")
+        if args.save_state:
+            agent.save_state(args.save_state)
+            print(f"State saved to: {args.save_state}")
         return
 
     # Interactive mode
@@ -467,6 +476,10 @@ def cmd_agent(args: argparse.Namespace) -> None:
         if args.export:
             session_hash = agent.export_session(args.export)
             print(f"Session exported to: {args.export}")
+
+        if args.save_state:
+            agent.save_state(args.save_state)
+            print(f"State saved to: {args.save_state}")
 
         print("Goodbye!")
 
@@ -874,6 +887,12 @@ def main() -> None:
     agent_parser.add_argument("--quantize", default=None, choices=["int8"], help="Quantization mode (experimental)")
     agent_parser.add_argument("--trace-mode", default="standard", choices=["minimal", "standard", "verbose"],
                               help="Trace detail level (default: standard)")
+    agent_parser.add_argument("--max-context-tokens", type=int, default=None,
+                              help="Max prompt tokens before truncation (default: no limit)")
+    agent_parser.add_argument("--save-state", default=None,
+                              help="Save agent state to file on exit (for resume)")
+    agent_parser.add_argument("--load-state", default=None,
+                              help="Resume from a saved agent state file")
 
     # -- detinfer replay <session.json> --
     replay_parser = subparsers.add_parser("replay", help="Replay and verify a saved session")
