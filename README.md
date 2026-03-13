@@ -4,7 +4,7 @@ Deterministic runtime controls, tracing, replay verification, and drift checks f
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/xailong-6969/detinfer/blob/main/LICENSE)
-[![PyPI](https://img.shields.io/badge/pypi-v0.3.0-blue.svg)](https://pypi.org/project/detinfer/)
+[![PyPI](https://img.shields.io/badge/pypi-v0.3.1-blue.svg)](https://pypi.org/project/detinfer/)
 
 Start here if you want plain-language docs: [docs/GUIDE.md](https://github.com/xailong-6969/detinfer/blob/main/docs/GUIDE.md)  
 Detailed semantics and guarantees: [docs/determinism-spec.md](https://github.com/xailong-6969/detinfer/blob/main/docs/determinism-spec.md)

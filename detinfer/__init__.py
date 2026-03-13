@@ -43,7 +43,7 @@ try:
 except ImportError:
     DeterministicAgent = None
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # ---------------------------------------------------------------------------
 # Module-level state for the enforce() API
