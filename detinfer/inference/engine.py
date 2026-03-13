@@ -435,20 +435,21 @@ class DeterministicEngine:
             device=self.device,
         )
 
-        if input_tensor is not None:
-            return verifier.verify_with_input(
-                input_tensor, num_runs=num_runs, seed=self.seed
-            )
-        elif prompt is not None:
-            return verifier.verify(
-                prompt, num_runs=num_runs, seed=self.seed
-            )
-        else:
-            # Default test prompt
-            default_prompt = "What is 2 + 2? Answer with just the number."
-            return verifier.verify(
-                default_prompt, num_runs=num_runs, seed=self.seed
-            )
+        with self.enforcer.deterministic_context():
+            if input_tensor is not None:
+                return verifier.verify_with_input(
+                    input_tensor, num_runs=num_runs, seed=self.seed
+                )
+            elif prompt is not None:
+                return verifier.verify(
+                    prompt, num_runs=num_runs, seed=self.seed
+                )
+            else:
+                # Default test prompt
+                default_prompt = "What is 2 + 2? Answer with just the number."
+                return verifier.verify(
+                    default_prompt, num_runs=num_runs, seed=self.seed
+                )
 
     def scan(self) -> EnforcementReport:
         """Return the enforcement report from model loading.

@@ -137,6 +137,7 @@ def replay_session(
 
     # Create agent with same config
     max_tokens = original.generation_config.get("max_new_tokens", 256)
+    max_context_tokens = original.generation_config.get("max_context_tokens")
     agent = DeterministicAgent(
         model_name=replay_model,
         seed=original.seed,
@@ -144,6 +145,7 @@ def replay_session(
         trace_mode=original.trace_mode,
         quantize=original.quantization.get("mode"),
         system_prompt=system_prompt,
+        max_context_tokens=max_context_tokens,
     )
 
     details = []
@@ -444,6 +446,34 @@ def diff_sessions(path_a: str, path_b: str) -> DiffResult:
                 observed=step_b.type,
                 details=details + [f"Agent step {i+1}: expected {step_a.type}, got {step_b.type}"],
             )
+
+        if step_a.type == "llm_generation":
+            if step_a.generation_turn != step_b.generation_turn:
+                return DiffResult(
+                    identical=False,
+                    total_turns_a=len(trace_a.generations),
+                    total_turns_b=len(trace_b.generations),
+                    first_mismatch_turn=step_a.turn,
+                    first_mismatch_step=step_a.step,
+                    mismatch_type="generation_turn",
+                    expected=step_a.generation_turn,
+                    observed=step_b.generation_turn,
+                    details=details + ["LLM generation step points to a different turn"],
+                )
+
+        if step_a.type == "checkpoint":
+            if step_a.checkpoint_data != step_b.checkpoint_data:
+                return DiffResult(
+                    identical=False,
+                    total_turns_a=len(trace_a.generations),
+                    total_turns_b=len(trace_b.generations),
+                    first_mismatch_turn=step_a.turn,
+                    first_mismatch_step=step_a.step,
+                    mismatch_type="checkpoint_data",
+                    expected=str(step_a.checkpoint_data),
+                    observed=str(step_b.checkpoint_data),
+                    details=details + ["Checkpoint payload differs"],
+                )
 
         if step_a.type == "tool_call":
             if step_a.tool != step_b.tool:

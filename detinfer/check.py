@@ -35,6 +35,7 @@ ERROR_TYPES = {
 
 WARNING_TYPES = {
     "ENVIRONMENT_DRIFT",
+    "SESSION_HASH_DRIFT",
 }
 
 INFO_TYPES = {
@@ -134,9 +135,10 @@ def check_sessions(
     _compare_messages_and_prompts(baseline, candidate, report)
     _compare_generations(baseline, candidate, report)
 
-    # Session hash (quick overall check)
+    # Session hash is derivative metadata, so report it separately from
+    # root-cause execution drift and do not double-count it as OUTPUT_DRIFT.
     _compare_scalar_field(baseline, candidate, report,
-                          "session_hash", "OUTPUT_DRIFT")
+                          "session_hash", "SESSION_HASH_DRIFT")
 
     _finalize_report(report, fail_on=fail_on, allow=allow)
     return report

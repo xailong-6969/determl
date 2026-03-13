@@ -280,7 +280,10 @@ def cross_verify(proof: InferenceProof) -> CrossVerifyResult:
         seed=proof.seed,
         precision=proof.precision,
     )
-    engine.load(proof.model_name)
+    load_kwargs = {}
+    if proof.quantization in {"bitsandbytes", "int8"}:
+        load_kwargs["quantize"] = "int8"
+    engine.load(proof.model_name, **load_kwargs)
 
     # Run the same inference
     result = engine.run(proof.prompt, max_new_tokens=proof.max_new_tokens)

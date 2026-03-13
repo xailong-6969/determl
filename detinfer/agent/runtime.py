@@ -173,6 +173,7 @@ class DeterministicAgent:
                 "top_p": None,
                 "top_k": None,
                 "max_new_tokens": max_new_tokens,
+                "max_context_tokens": self.truncation.max_context_tokens,
             },
             tokenizer_info={
                 "name": model_name,
