@@ -595,6 +595,8 @@ class DeterministicAgent:
         Args:
             path: Output file path (.json or .json.gz).
         """
+        self.session.compute_session_hash()
+
         state = {
             "version": 1,
             "agent_config": {
@@ -641,10 +643,26 @@ class DeterministicAgent:
                 state = json.load(f)
 
         config = state["agent_config"]
-        if config["model_name"] != self.model_name:
+        current_config = {
+            "model_name": self.model_name,
+            "seed": self.seed,
+            "max_new_tokens": self.max_new_tokens,
+            "trace_mode": self.trace_mode.value,
+            "quantize": self.quantize,
+            "system_prompt": self.system_prompt,
+            "max_context_tokens": self.truncation.max_context_tokens,
+        }
+        mismatches = []
+        for key, current_value in current_config.items():
+            saved_value = config.get(key)
+            if saved_value != current_value:
+                mismatches.append(
+                    f"{key}: saved {saved_value!r}, current {current_value!r}"
+                )
+        if mismatches:
             raise ValueError(
-                f"State was saved with model '{config['model_name']}' "
-                f"but this agent is loaded with '{self.model_name}'"
+                "State config does not match current agent: "
+                + "; ".join(mismatches)
             )
 
         self._conversation_history = state["conversation_history"]

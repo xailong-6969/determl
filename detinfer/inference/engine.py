@@ -279,6 +279,9 @@ class DeterministicEngine:
             self.model, model_name=self.model_name
         )
 
+        # Lock seeds and deterministic backend settings for preloaded models too.
+        self.config.apply()
+
         # Capture environment fingerprint
         self.fingerprint = self.guardian.create_fingerprint()
 
@@ -340,7 +343,7 @@ class DeterministicEngine:
 
         # Canonicalize
         raw_hash = hash_string(text)
-        canonical = self.canonicalizer.canonicalize(output_ids.float())
+        canonical = self.canonicalizer.canonicalize(output_ids)
 
         # Get backend metadata
         model_dtype = str(next(self.model.parameters()).dtype) if self.model else "unknown"

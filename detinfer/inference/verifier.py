@@ -125,7 +125,17 @@ class InferenceVerifier:
                 "for models without a tokenizer."
             )
 
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self._input_device)
+        formatted_prompt = prompt
+        if hasattr(self.tokenizer, "chat_template") and self.tokenizer.chat_template:
+            try:
+                messages = [{"role": "user", "content": prompt}]
+                formatted_prompt = self.tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                )
+            except Exception:
+                pass
+
+        inputs = self.tokenizer(formatted_prompt, return_tensors="pt").to(self._input_device)
 
         def run_fn() -> torch.Tensor:
             output_ids = self.model.generate(
